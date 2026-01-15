@@ -1,0 +1,3 @@
+spring:
+  application:
+    name: Test_Scanner_backend
