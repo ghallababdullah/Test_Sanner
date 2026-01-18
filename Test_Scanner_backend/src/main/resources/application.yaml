@@ -1,3 +1,29 @@
 spring:
   application:
     name: Test_Scanner_backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scanner_db
+    username: postgres
+    password: "051020"
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        connection:
+          isolation: 2
+
+  jwt:
+    secret:
+      string: abdullah4u12345abdullah4u12345abdullah4u12345
+    expiration:
+      time: 86400000
