@@ -67,6 +67,8 @@ public class User extends BaseEntity {
 
     private boolean active ;
 
+    private  boolean verified ;
+
     public enum Role {
         USER,
         ADMIN

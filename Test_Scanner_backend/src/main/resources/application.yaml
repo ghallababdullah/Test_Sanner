@@ -27,3 +27,20 @@ spring:
       string: abdullah4u12345abdullah4u12345abdullah4u12345
     expiration:
       time: 86400000
+  mail:
+    host: smtp.mailtrap.io
+    port: 587
+    username: 7574b621c1f8bf
+    password: c9d5b38ae805b0
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  app:
+    mail:
+      from: no-reply@scannerage.dev
+      name: ScannerAGE Notifications
+
