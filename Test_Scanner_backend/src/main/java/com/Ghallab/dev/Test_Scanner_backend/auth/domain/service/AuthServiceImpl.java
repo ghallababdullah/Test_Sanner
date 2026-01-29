@@ -187,7 +187,17 @@ public class AuthServiceImpl implements AuthService {
 
             user.setVerified(true);
             userRepository.save(user);  // ✅ СОХРАНЯЕМ ИЗМЕНЕНИЯ В БД
+          /*  // Отправляем email с подтверждением
+            Map<String, Object> templateVariables = new HashMap<>();
+            templateVariables.put("firstName", user.getFirstName());
+            templateVariables.put("lastName", user.getLastName());
 
+            NotificationDto verificationEmail = NotificationDto.builder()
+                    .recipient(user.getEmail())
+                    .title("Почта успешно подтверждена")
+                    .templateName("congrats-email")
+                    .templateVariable(templateVariables)
+                    .build();*/
             log.info("✅ Email verified successfully for user: {}", email);
 
             return Response.<String>builder()

@@ -6,6 +6,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -13,9 +14,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
 
+@Service
 public class TokenService {
 
-    @Value("${jwt.secret.string}")
+    @Value("${spring.jwt.secret.string}")
     private String JWT_SECRETE;
 
     private static  final long EXPIRATION_TIME = 60 * 60 * 1000; // 1 hour

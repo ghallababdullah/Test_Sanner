@@ -70,6 +70,10 @@ public class NotificationServiceImpl implements NotificationService {
                 helper.setText(notificationDTO.getMessage(), true);
             }
 
+            // ✅ ОТПРАВЛЯЕМ EMAIL
+            mailSender.send(mimeMessage);
+            log.info("✅ [SYNC] Email sent successfully to: {}", notificationDTO.getRecipient());
+
         }
         catch (MessagingException | UnsupportedEncodingException e) {
             log.error("❌ [SYNC] Failed to send email to {}: {}", notificationDTO.getRecipient(), e.getMessage(), e);

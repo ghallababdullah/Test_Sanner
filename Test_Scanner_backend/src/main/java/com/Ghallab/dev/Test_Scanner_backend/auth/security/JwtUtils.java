@@ -17,7 +17,7 @@ import java.util.function.Function;
 @Service
 public class JwtUtils {
 
-    @Value("${jwt.secret.string}")
+    @Value("${spring.jwt.secret.string}")
     private String jwtSecreteString;
 
 

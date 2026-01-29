@@ -1,3 +1,6 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: Test_Scanner_backend
@@ -39,8 +42,8 @@ spring:
           starttls:
             enable: true
 
-  app:
-    mail:
-      from: no-reply@scannerage.dev
-      name: ScannerAGE Notifications
+app:
+  mail:
+    from: no-reply@scannerage.dev
+    name: ScannerAGE Notifications
 
