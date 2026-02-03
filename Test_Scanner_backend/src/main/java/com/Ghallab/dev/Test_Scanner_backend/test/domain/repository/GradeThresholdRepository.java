@@ -13,5 +13,7 @@ import java.util.UUID;
 @Repository
 public interface GradeThresholdRepository extends JpaRepository<GradeThreshold, UUID> {
     List<GradeThreshold> findByTestId(UUID testId);
+
+    List<GradeThreshold> findByTestIdOrderByMinPercentageAsc(UUID testId);
 }
 

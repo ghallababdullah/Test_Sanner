@@ -15,6 +15,8 @@ import java.util.UUID;
 public interface AnswerKeyRepository extends JpaRepository<AnswerKey, UUID> {
     List<AnswerKey> findByTestId(UUID testId);
 
+    List<AnswerKey> findByTestIdOrderByQuestionNumber(UUID testId);
+
     Optional<AnswerKey> findByTestIdAndQuestionNumber(UUID testId, Integer questionNumber);
 }
 
