@@ -22,7 +22,6 @@ public class AppConfig {
         templateEngine.setTemplateResolver(templateResolver);
 
         return templateEngine ;
-
     }
 
     @Bean
@@ -32,6 +31,23 @@ public class AppConfig {
                 .setFieldMatchingEnabled(true)
                 .setFieldAccessLevel(org.modelmapper.config.Configuration.AccessLevel.PRIVATE)
                 .setMatchingStrategy(MatchingStrategies.STANDARD) ;
+
+        // ✅ Конфигурация для CreateAnswerKeyRequest -> AnswerKey (Entity creation only)
+        // Пропускаем системные поля которые управляются Hibernate
+        modelMapper.typeMap(
+                com.Ghallab.dev.Test_Scanner_backend.test.dto.CreateAnswerKeyRequest.class,
+                com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.AnswerKey.class
+        )
+        .addMappings(mapper -> {
+            mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.AnswerKey::setId);
+            mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.AnswerKey::setVersion);
+            mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.AnswerKey::setCreatedAt);
+            mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.AnswerKey::setUpdatedAt);
+        });
+
+        // ✅ Для остальных Entity -> DTO маппингов используем РУЧНОЕ МАППИНГ в Mapper классах!
+        // Это обеспечивает полный контроль над маппингом и избегает ошибок с complex relationships
+
         return modelMapper ;
     }
 
@@ -46,3 +62,4 @@ public class AppConfig {
     }
 
 }
+

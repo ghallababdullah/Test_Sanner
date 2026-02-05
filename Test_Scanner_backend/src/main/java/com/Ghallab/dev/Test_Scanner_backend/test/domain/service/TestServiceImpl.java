@@ -37,14 +37,14 @@ public class TestServiceImpl implements TestService {
 
     @Override
     @Transactional
-    public Response<TestResponse> createTest(CreateTestRequest request, UUID userId) {
-        log.info("📝 Starting test creation for user: {}", userId);
+    public Response<TestResponse> createTest(CreateTestRequest request, String userEmail) {
+        log.info("📝 Starting test creation for user: {}", userEmail);
 
-        // ✅ Проверить, что пользователь существует
-        var user = userRepository.findById(userId)
+        // ✅ Проверить, что пользователь существует по EMAIL
+        var user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> {
-                    log.error("❌ User not found with id: {}", userId);
-                    return new NotFoundException("User not found with id: " + userId);
+                    log.error("❌ User not found with email: {}", userEmail);
+                    return new NotFoundException("User not found with email: " + userEmail);
                 });
 
         log.info("✅ User found: {}", user.getEmail());
@@ -177,31 +177,20 @@ public class TestServiceImpl implements TestService {
 
 
 
-    @Override
-    public Response<List<TestResponse>> getAllTests() {
-        log.info("🔍 Retrieving all tests");
-
-        // ✅ Получить все тесты из БД
-        List<Test> tests = testRepository.findByIsActiveTrue();
-        log.info("✅ Found {} tests in database", tests.size());
-
-        // ✅ Преобразовать List<Test> → List<TestResponse> через Mapper
-        List<TestResponse> responses = testMapper.toTestResponseList(tests);
-        log.info("✅ Converted {} tests to responses", responses.size());
-
-        return Response.<List<TestResponse>>builder()
-                .success(true)
-                .message("All tests retrieved successfully")
-                .data(responses)
-                .build();
-    }
 
     @Override
-    public Response<List<TestResponse>> getTestsByUser(UUID userId) {
-        log.info("🔍 Retrieving all tests for user {}", userId);
+    public Response<List<TestResponse>> getTestsByUser(String userEmail) {
+        log.info("🔍 Retrieving all tests for user {}", userEmail);
 
-        // ✅ Получить все тесты из БД
-        List<Test> tests = testRepository.findByCreatorId(userId);
+        // ✅ Найти пользователя по email
+        var user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> {
+                    log.error("❌ User not found with email: {}", userEmail);
+                    return new NotFoundException("User not found with email: " + userEmail);
+                });
+
+        // ✅ Получить все тесты этого пользователя по его ID
+        List<Test> tests = testRepository.findByCreatorId(user.getId());
         log.info("✅ Found {} tests in database", tests.size());
 
         // ✅ Преобразовать List<Test> → List<TestResponse> через Mapper

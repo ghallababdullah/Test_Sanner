@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Test entity representing a test/exam created by a teacher
@@ -24,7 +26,7 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = true)
 public class Test extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User creator;
 
@@ -47,5 +49,11 @@ public class Test extends BaseEntity {
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
+
+    @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AnswerKey> answerKeys = new ArrayList<>();
+
+    @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<GradeThreshold> gradeThreshold = new ArrayList<>();
 }
 

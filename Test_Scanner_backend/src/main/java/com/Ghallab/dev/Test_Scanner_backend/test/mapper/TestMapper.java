@@ -20,6 +20,7 @@ public class TestMapper {
 
     private final ModelMapper modelMapper;
 
+
     public TestMapper(ModelMapper modelMapper) {
         this.modelMapper = modelMapper;
     }
@@ -32,7 +33,7 @@ public class TestMapper {
      */
     public TestResponse toTestResponse(Test test) {
         TestResponse response = modelMapper.map(test, TestResponse.class);
-        // Установить creatorId и creatorEmail вручную
+
         if (test.getCreator() != null) {
             response.setCreatorId(test.getCreator().getId());
             response.setCreatorEmail(test.getCreator().getEmail());
@@ -107,10 +108,17 @@ public class TestMapper {
     /**
      * Преобразует CreateAnswerKeyRequest DTO в AnswerKey Entity
      * ВАЖНО: Используется в AnswerKeyServiceImpl.createAnswerKey()
+     * Передаём Test объект для правильного связывания
      */
     public AnswerKey toAnswerKeyEntity(CreateAnswerKeyRequest request, Test test) {
         AnswerKey answerKey = modelMapper.map(request, AnswerKey.class);
         answerKey.setTest(test);
+
+//        // ✅ Явно установить версию (ModelMapper её пропускает)
+//        answerKey.setVersion(0L);
+//
+//        // ✅ Явно установить createdAt (будет переопределен @CreatedDate, но для безопасности)
+//        answerKey.setCreatedAt(java.time.LocalDateTime.now());
 
         // Установить дефолтные значения если не указаны
         if (answerKey.getMaxPoints() == null) {

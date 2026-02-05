@@ -58,5 +58,8 @@ public class ScannedBlankResponse {
     private LocalDateTime scannedAt;
 
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    private Long version;
 }
 

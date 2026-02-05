@@ -18,7 +18,6 @@ public interface TestRepository extends JpaRepository<Test, UUID> {
     @Override
     Optional<Test> findById(UUID uuid);
 
-    List<Test> getAllTests();
 
     List<Test> findByIsActiveTrue();
 }

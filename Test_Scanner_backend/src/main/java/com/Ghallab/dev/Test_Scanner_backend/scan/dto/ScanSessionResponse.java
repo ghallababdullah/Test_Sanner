@@ -41,5 +41,8 @@ public class ScanSessionResponse {
     private Integer processingTimeMs;
 
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    private Long version;
 }
 

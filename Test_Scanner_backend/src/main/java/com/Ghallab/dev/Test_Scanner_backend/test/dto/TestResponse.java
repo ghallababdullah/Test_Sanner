@@ -32,5 +32,9 @@ public class TestResponse {
     private String creatorEmail;
 
     private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+
+    private Long version;
 }
 

@@ -25,5 +25,8 @@ public class GradeThresholdResponse {
     private Integer maxPercentage;
 
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    private Long version;
 }
 

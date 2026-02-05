@@ -36,5 +36,8 @@ public class NotificationResponse {
     private JsonNode metadata;
 
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    private Long version;
 }
 

@@ -1,0 +1,925 @@
+{
+  "info": {
+    "name": "Test Scanner API - Complete Testing Plan",
+    "description": "Full comprehensive testing suite - 4 Tests with independent steps for each endpoint",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    },
+    {
+      "key": "jwtToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test1Id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test2Id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test3Id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test4Id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "answerKey1_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "answerKey3_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "gradeThreshold1_1",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "PHASE 1: CREATE TESTS",
+      "description": "Create 4 independent tests",
+      "item": [
+        {
+          "name": "Step 1.1 - Create Test 1 (Математика - 10 questions)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Математика 5 класс - Контрольная работа\",\n  \"subject\": \"Математика\",\n  \"description\": \"Контрольная работа по пройденному материалу\",\n  \"totalQuestions\": 10,\n  \"maxScore\": 100.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/create-test",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "create-test"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "pm.test(\"✅ Success true\", function () {",
+                  "    pm.expect(pm.response.json().success).to.equal(true);",
+                  "});",
+                  "pm.test(\"✅ Save test1Id\", function () {",
+                  "    pm.environment.set(\"test1Id\", pm.response.json().data.id);",
+                  "    pm.environment.set(\"userId\", pm.response.json().data.creatorId);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 1.2 - Create Test 2 (Русский язык - 5 questions)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Русский язык 6 класс - Проверочная работа\",\n  \"subject\": \"Русский язык\",\n  \"description\": \"Проверочная работа на пройденные правила орфографии\",\n  \"totalQuestions\": 5,\n  \"maxScore\": 50.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/create-test",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "create-test"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "pm.test(\"✅ Save test2Id\", function () {",
+                  "    pm.environment.set(\"test2Id\", pm.response.json().data.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 1.3 - Create Test 3 (История - 5 questions)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"История 7 класс - Тест по Средневековью\",\n  \"subject\": \"История\",\n  \"description\": \"Тест на знание событий Средневековья\",\n  \"totalQuestions\": 5,\n  \"maxScore\": 50.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/create-test",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "create-test"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "pm.test(\"✅ Save test3Id\", function () {",
+                  "    pm.environment.set(\"test3Id\", pm.response.json().data.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 1.4 - Try Create Test 4 with 33 Questions (SHOULD FAIL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Физика 9 класс - Механика (INVALID)\",\n  \"subject\": \"Физика\",\n  \"description\": \"Попытка с 33 вопросами - должно ошибиться!\",\n  \"totalQuestions\": 33,\n  \"maxScore\": 330.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/create-test",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "create-test"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"❌ MUST FAIL: totalQuestions > 32\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 1.5 - Create Test 4 CORRECTLY (Физика - 32 questions MAX)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Физика 9 класс - Механика (Полная)\",\n  \"subject\": \"Физика\",\n  \"description\": \"Полный тест по механике с максимальным количеством вопросов\",\n  \"totalQuestions\": 32,\n  \"maxScore\": 320.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/create-test",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "create-test"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "pm.test(\"✅ Save test4Id\", function () {",
+                  "    pm.environment.set(\"test4Id\", pm.response.json().data.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PHASE 2: CREATE ANSWER KEYS",
+      "description": "Create answer keys for all 4 tests",
+      "item": [
+        {
+          "name": "Step 2.1 - Create 10 Answer Keys for Test 1",
+          "description": "Execute this 10 times with questionNumber 1-10",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"testId\": \"{{test1Id}}\",\n  \"questionNumber\": 1,\n  \"correctAnswer\": \"ABC\",\n  \"maxPoints\": 10.0,\n  \"toleranceLevel\": 1,\n  \"answerType\": \"TEXT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test1Id}}/answer-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test1Id}}", "answer-keys"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "if (pm.response.json().data.questionNumber === 1) {",
+                  "    pm.environment.set(\"answerKey1_1\", pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 2.2 - Create 5 Answer Keys for Test 2",
+          "description": "Execute this 5 times with questionNumber 1-5",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"testId\": \"{{test2Id}}\",\n  \"questionNumber\": 1,\n  \"correctAnswer\": \"пример\",\n  \"maxPoints\": 10.0,\n  \"toleranceLevel\": 2,\n  \"answerType\": \"TEXT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test2Id}}/answer-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test2Id}}", "answer-keys"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 2.3 - Create 5 Answer Keys for Test 3",
+          "description": "Execute this 5 times with questionNumber 1-5",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"testId\": \"{{test3Id}}\",\n  \"questionNumber\": 1,\n  \"correctAnswer\": \"1066\",\n  \"maxPoints\": 10.0,\n  \"toleranceLevel\": 0,\n  \"answerType\": \"TEXT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test3Id}}/answer-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test3Id}}", "answer-keys"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "if (pm.response.json().data.questionNumber === 1) {",
+                  "    pm.environment.set(\"answerKey3_1\", pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 2.4 - Create 32 Answer Keys for Test 4",
+          "description": "Execute this 32 times with questionNumber 1-32 (MAXIMUM!)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"testId\": \"{{test4Id}}\",\n  \"questionNumber\": 1,\n  \"correctAnswer\": \"F=ma\",\n  \"maxPoints\": 10.0,\n  \"toleranceLevel\": 1,\n  \"answerType\": \"TEXT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test4Id}}/answer-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test4Id}}", "answer-keys"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PHASE 3: GET ENDPOINTS (Read Operations)",
+      "description": "Test all GET endpoints",
+      "item": [
+        {
+          "name": "Step 3.1 - Get All Tests (GET /tests)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Response is array with 4 tests\", function () {",
+                  "    pm.expect(pm.response.json().data).to.be.an('array');",
+                  "    pm.expect(pm.response.json().data.length).to.equal(4);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 3.2 - Get Test 1 by ID (GET /tests/{testId})",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test1Id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test1Id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Test title is correct\", function () {",
+                  "    pm.expect(pm.response.json().data.title).to.include(\"Математика\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 3.3 - Get Test 1 With Details (GET /tests/{testId}/details)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test1Id}}/details",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test1Id}}", "details"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Contains answerKeys array\", function () {",
+                  "    pm.expect(pm.response.json().data.answerKeys).to.be.an('array');",
+                  "    pm.expect(pm.response.json().data.answerKeys.length).to.equal(10);",
+                  "});",
+                  "pm.test(\"✅ Contains gradeThresholds array (4 default)\", function () {",
+                  "    pm.expect(pm.response.json().data.gradeThresholds).to.be.an('array');",
+                  "    pm.expect(pm.response.json().data.gradeThresholds.length).to.equal(4);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 3.4 - Get Tests by User (GET /tests/user/{userId})",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "user", "{{userId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Returns 4 tests for user\", function () {",
+                  "    pm.expect(pm.response.json().data.length).to.equal(4);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 3.5 - Get Answer Keys for Test 1 (GET /tests/{testId}/answer-keys)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test1Id}}/answer-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test1Id}}", "answer-keys"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Returns 10 answer keys\", function () {",
+                  "    pm.expect(pm.response.json().data.length).to.equal(10);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 3.6 - Get Grade Thresholds for Test 1 (GET /tests/{testId}/grade-thresholds)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test1Id}}/grade-thresholds",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test1Id}}", "grade-thresholds"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Returns 4 default grade thresholds\", function () {",
+                  "    pm.expect(pm.response.json().data.length).to.equal(4);",
+                  "});",
+                  "pm.test(\"✅ Save first grade threshold ID\", function () {",
+                  "    pm.environment.set(\"gradeThreshold1_1\", pm.response.json().data[0].id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PHASE 4: UPDATE ENDPOINTS (Put Operations)",
+      "description": "Test all PUT endpoints",
+      "item": [
+        {
+          "name": "Step 4.1 - Update Test 1 (PUT /tests/update-test/{testId})",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Математика 5 класс - Контрольная работа (ОБНОВЛЕНА)\",\n  \"subject\": \"Арифметика\",\n  \"description\": \"Обновленное описание\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/update-test/{{test1Id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "update-test", "{{test1Id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Title updated\", function () {",
+                  "    pm.expect(pm.response.json().data.title).to.include(\"ОБНОВЛЕНА\");",
+                  "});",
+                  "pm.test(\"✅ totalQuestions NOT changed (must be 10)\", function () {",
+                  "    pm.expect(pm.response.json().data.totalQuestions).to.equal(10);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 4.2 - Update Answer Key 1 from Test 1 (PUT /tests/{testId}/answer-keys/{keyId})",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correctAnswer\": \"ABCD\",\n  \"maxPoints\": 15.0,\n  \"toleranceLevel\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test1Id}}/answer-keys/{{answerKey1_1}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test1Id}}", "answer-keys", "{{answerKey1_1}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Answer updated\", function () {",
+                  "    pm.expect(pm.response.json().data.correctAnswer).to.equal(\"ABCD\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 4.3 - Update Grade Threshold for Test 1 (PUT /tests/{testId}/grade-thresholds/{id})",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"minPercentage\": 90,\n  \"maxPercentage\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test1Id}}/grade-thresholds/{{gradeThreshold1_1}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test1Id}}", "grade-thresholds", "{{gradeThreshold1_1}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ MinPercentage updated\", function () {",
+                  "    pm.expect(pm.response.json().data.minPercentage).to.equal(90);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 4.4 - Activate Test 2 (PUT /tests/{testId}/activate)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test2Id}}/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test2Id}}", "activate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 4.5 - Deactivate Test 2 (PUT /tests/{testId}/deactivate)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test2Id}}/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test2Id}}", "deactivate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PHASE 5: DELETE ENDPOINTS (Delete Operations)",
+      "description": "Test all DELETE endpoints",
+      "item": [
+        {
+          "name": "Step 5.1 - Delete Answer Key 1 from Test 3 (DELETE /tests/{testId}/answer-keys/{keyId})",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test3Id}}/answer-keys/{{answerKey3_1}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test3Id}}", "answer-keys", "{{answerKey3_1}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 5.2 - Delete Grade Threshold from Test 1 (DELETE /tests/{testId}/grade-thresholds/{id})",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test1Id}}/grade-thresholds/{{gradeThreshold1_1}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test1Id}}", "grade-thresholds", "{{gradeThreshold1_1}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 5.3 - Delete Test 2 (DELETE /tests/delete-test/{testId})",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/delete-test/{{test2Id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "delete-test", "{{test2Id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PHASE 6: VERIFICATION",
+      "description": "Verify final state of all data",
+      "item": [
+        {
+          "name": "Step 6.1 - Verify Only 3 Tests Remain",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Only 3 tests remain (Test 2 deleted)\", function () {",
+                  "    pm.expect(pm.response.json().data.length).to.equal(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 6.2 - Verify Test 3 Has 4 Answer Keys (was 5, 1 deleted)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test3Id}}/answer-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test3Id}}", "answer-keys"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Test 3 has 4 answer keys (1 was deleted)\", function () {",
+                  "    pm.expect(pm.response.json().data.length).to.equal(4);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Step 6.3 - Verify Test 1 Has 3 Grade Thresholds (was 4, 1 deleted)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests/{{test1Id}}/grade-thresholds",
+              "host": ["{{baseUrl}}"],
+              "path": ["tests", "{{test1Id}}", "grade-thresholds"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"✅ Status 200 OK\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "pm.test(\"✅ Test 1 has 3 grade thresholds (1 was deleted)\", function () {",
+                  "    pm.expect(pm.response.json().data.length).to.equal(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
