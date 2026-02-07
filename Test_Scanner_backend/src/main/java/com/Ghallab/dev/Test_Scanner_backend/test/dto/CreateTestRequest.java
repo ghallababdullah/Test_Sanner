@@ -17,6 +17,8 @@ public class CreateTestRequest {
 
     private String subject;
 
+    private String classLevel; // e.g., "10A", "11B" - for which class this test is intended
+
     private String description;
 
     @Min(value = 1, message = "Total questions must be at least 1")

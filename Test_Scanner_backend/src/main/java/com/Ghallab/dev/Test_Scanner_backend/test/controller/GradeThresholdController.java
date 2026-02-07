@@ -24,16 +24,48 @@ public class GradeThresholdController {
 
     /**
      * POST /api/tests/{testId}/grade-thresholds
-     * Создать новый порог оценки для теста
+     * Создать новые пороги оценок для теста (СПИСОК)
+     * Удаляет старые пороги и создает новые
      *
-     * @param request - данные для создания порога
-     * @return Response с созданным порогом
+     * @param testId - ID теста
+     * @param requests - данные для создания порогов (массив)
+     * @return Response со списком созданных порогов
      */
     @PostMapping
+    public ResponseEntity<Response<List<GradeThresholdResponse>>> createGradeThresholds(
+            @PathVariable UUID testId,
+            @Valid @RequestBody List<CreateGradeThresholdRequest> requests) {
+
+        log.info("📝 Create Grade Thresholds endpoint called for test ID: {}", testId);
+
+        // Установить testId для всех requests
+        requests.forEach(req -> req.setTestId(testId));
+
+        Response<List<GradeThresholdResponse>> response = gradeThresholdService.createGradeThresholds(testId, requests);
+
+        log.info("✅ Grade thresholds created successfully, count: {}", requests.size());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * POST /api/tests/{testId}/grade-thresholds/single
+     * Создать ОДИН порог оценки для теста
+     * Не удаляет существующие пороги, просто добавляет новый
+     *
+     * @param testId - ID теста
+     * @param request - данные для создания одного порога
+     * @return Response с созданным порогом
+     */
+    @PostMapping("/single")
     public ResponseEntity<Response<GradeThresholdResponse>> createGradeThreshold(
+            @PathVariable UUID testId,
             @Valid @RequestBody CreateGradeThresholdRequest request) {
 
-        log.info("📝 Create Grade Threshold endpoint called for test ID: {}", request.getTestId());
+        log.info("📝 Create Single Grade Threshold endpoint called for test ID: {}", testId);
+
+        // Установить testId в request
+        request.setTestId(testId);
 
         Response<GradeThresholdResponse> response = gradeThresholdService.createGradeThreshold(request);
 

@@ -61,6 +61,57 @@ public class GradeThresholdServiceImpl implements GradeThresholdService {
                 .build();
     }
 
+    /**
+     * Create multiple grade thresholds at once (e.g., all 4 grades for a test)
+     * Удаляет старые пороги и создает новые
+     */
+    @Override
+    @Transactional
+    public Response<List<GradeThresholdResponse>> createGradeThresholds(UUID testId, List<CreateGradeThresholdRequest> requests) {
+        log.info("🔍 Checking if test exists with id: {}", testId);
+
+        // ✅ Проверить что тест существует
+        Test test = testRepository.findById(testId)
+                .orElseThrow(() -> {
+                    log.error("❌ Test not found with id: {}", testId);
+                    return new NotFoundException("Test not found with id: " + testId);
+                });
+
+        log.info("✅ Test found: {}", test.getTitle());
+
+        // ✅ Удалить старые пороги для этого теста (заменяем их)
+        List<GradeThreshold> existingThresholds = gradeThresholdRepository.findByTestIdOrderByMinPercentageAsc(testId);
+        if (!existingThresholds.isEmpty()) {
+            log.info("🗑️ Deleting {} existing grade thresholds for test", existingThresholds.size());
+            gradeThresholdRepository.deleteAll(existingThresholds);
+        }
+
+        // ✅ Создать новые пороги
+        List<GradeThreshold> savedThresholds = new java.util.ArrayList<>();
+
+        for (CreateGradeThresholdRequest request : requests) {
+            log.info("📝 Creating grade threshold: {} ({}%)", request.getGradeSymbol(), request.getMinPercentage());
+
+            GradeThreshold gradeThreshold = testMapper.toGradeThresholdEntity(request, test);
+            GradeThreshold savedThreshold = gradeThresholdRepository.save(gradeThreshold);
+            savedThresholds.add(savedThreshold);
+
+            log.info("✅ Grade threshold saved with id: {}", savedThreshold.getId());
+        }
+
+        // ✅ Преобразовать в Response DTOs
+        List<GradeThresholdResponse> responseList = testMapper.toGradeThresholdResponseList(savedThresholds);
+
+        log.info("✅ All {} grade thresholds created successfully", responseList.size());
+
+        return Response.<List<GradeThresholdResponse>>builder()
+                .success(true)
+                .message("Grade thresholds created successfully")
+                .statusCode(HttpStatus.CREATED.value())
+                .data(responseList)
+                .build();
+    }
+
     @Override
     public Response<List<GradeThresholdResponse>> getGradeThresholdsByTest(UUID testId) {
         log.info("🔍 Fetching grade thresholds for test with id: {}", testId);

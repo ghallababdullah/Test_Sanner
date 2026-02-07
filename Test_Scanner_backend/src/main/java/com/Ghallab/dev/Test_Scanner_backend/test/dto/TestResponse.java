@@ -19,6 +19,8 @@ public class TestResponse {
 
     private String subject;
 
+    private String classLevel; // e.g., "10A", "11B"
+
     private String description;
 
     private Integer totalQuestions;

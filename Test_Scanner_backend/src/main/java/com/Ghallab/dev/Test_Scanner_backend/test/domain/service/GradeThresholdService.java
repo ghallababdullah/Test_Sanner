@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public interface GradeThresholdService {
     // ПОРОГИ ОЦЕНОК (GradeThreshold)
+    Response<List<GradeThresholdResponse>> createGradeThresholds(UUID testId, List<CreateGradeThresholdRequest> requests);
     Response<GradeThresholdResponse> createGradeThreshold(CreateGradeThresholdRequest request);
     Response<List<GradeThresholdResponse>> getGradeThresholdsByTest(UUID testId);
     Response<GradeThresholdResponse> updateGradeThreshold(UUID thresholdId, UpdateGradeThresholdRequest request);

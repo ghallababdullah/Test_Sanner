@@ -37,6 +37,9 @@ public class Test extends BaseEntity {
     @Column(name = "subject", length = 100)
     private String subject;
 
+    @Column(name = "class", length = 50)
+    private String classLevel; // e.g., "10A", "11B", "9th Grade" - for which class this test is intended
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 

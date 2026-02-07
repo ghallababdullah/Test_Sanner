@@ -30,7 +30,8 @@ public class AppConfig {
         modelMapper.getConfiguration()
                 .setFieldMatchingEnabled(true)
                 .setFieldAccessLevel(org.modelmapper.config.Configuration.AccessLevel.PRIVATE)
-                .setMatchingStrategy(MatchingStrategies.STANDARD) ;
+                .setMatchingStrategy(MatchingStrategies.STANDARD)
+                .setAmbiguityIgnored(true);  // ← Игнорируем неоднозначности
 
         // ✅ Конфигурация для CreateAnswerKeyRequest -> AnswerKey (Entity creation only)
         // Пропускаем системные поля которые управляются Hibernate
@@ -43,6 +44,19 @@ public class AppConfig {
             mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.AnswerKey::setVersion);
             mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.AnswerKey::setCreatedAt);
             mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.AnswerKey::setUpdatedAt);
+        });
+
+        // ✅ Конфигурация для CreateGradeThresholdRequest -> GradeThreshold (Entity creation only)
+        // Пропускаем системные поля которые управляются Hibernate
+        modelMapper.typeMap(
+                com.Ghallab.dev.Test_Scanner_backend.test.dto.CreateGradeThresholdRequest.class,
+                com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.GradeThreshold.class
+        )
+        .addMappings(mapper -> {
+            mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.GradeThreshold::setId);
+            mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.GradeThreshold::setVersion);
+            mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.GradeThreshold::setCreatedAt);
+            mapper.skip(com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.GradeThreshold::setUpdatedAt);
         });
 
         // ✅ Для остальных Entity -> DTO маппингов используем РУЧНОЕ МАППИНГ в Mapper классах!
