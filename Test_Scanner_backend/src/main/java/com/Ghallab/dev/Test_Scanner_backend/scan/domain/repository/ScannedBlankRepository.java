@@ -9,15 +9,17 @@ import java.util.UUID;
 
 /**
  * Repository for ScannedBlank entity
+ * Provides data access for raw OCR scan data
  */
 @Repository
 public interface ScannedBlankRepository extends JpaRepository<ScannedBlank, UUID> {
+
     List<ScannedBlank> findByScanSessionId(UUID scanSessionId);
 
     List<ScannedBlank> findByTestId(UUID testId);
 
     List<ScannedBlank> findByNeedsReviewTrue();
-
-    List<ScannedBlank> findByIsScoredFalse();
 }
+
+
 

@@ -1,6 +1,5 @@
 package com.Ghallab.dev.Test_Scanner_backend.scan.dto;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,6 +9,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Response for scanned blank - contains ONLY raw OCR data
+ * No grading/scoring information
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,43 +26,29 @@ public class ScannedBlankResponse {
 
     private String studentName;
 
+    private String studentLastName;
+
     private String studentClass;
 
     private LocalDate testDate;
 
+    // OCR Quality
     private BigDecimal overallConfidence;
 
     private Boolean needsReview;
 
     private String reviewStatus;
 
-    private JsonNode answers;
+    // Raw answers (deserialized from JSON strings)
+    private Object answers;
 
-    private JsonNode errorCorrections;
+    private Object errorCorrections;
 
-    private JsonNode finalAnswers;
+    private Boolean isErrorCorrectionApplied;
 
-    private Boolean isScored;
-
-    private BigDecimal rawScore;
-
-    private BigDecimal maxScore;
-
-    private BigDecimal percentage;
-
-    private String grade;
-
-    private String originalImagePath;
-
-    private String processedImagePath;
-
-    private String thumbnailPath;
-
+    // Timestamps
     private LocalDateTime scannedAt;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
-    private Long version;
+    private LocalDateTime reviewedAt;
 }
 

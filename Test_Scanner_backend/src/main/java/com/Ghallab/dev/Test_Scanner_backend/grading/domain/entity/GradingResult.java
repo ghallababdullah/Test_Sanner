@@ -29,7 +29,7 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class GradingResult extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL) // TODO : Change to LAZY if performance issues arise
     @JoinColumn(name = "test_id", nullable = false)
     private Test test;
 

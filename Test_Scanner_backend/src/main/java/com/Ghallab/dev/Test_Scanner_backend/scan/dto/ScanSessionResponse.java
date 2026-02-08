@@ -7,6 +7,10 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Response for scan session
+ * Contains metadata about scanning session, not processing statistics
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,21 +32,9 @@ public class ScanSessionResponse {
 
     private Integer totalBlanks;
 
-    private Integer processedBlanks;
-
-    private Integer failedBlanks;
-
-    private String status;
-
     private LocalDateTime startedAt;
 
-    private LocalDateTime completedAt;
-
-    private Integer processingTimeMs;
+    private Object metadata; // Metadata as JSON (parsed from string in entity)
 
     private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
-    private Long version;
 }
-

@@ -1,0 +1,552 @@
+{
+  "info": {
+    "name": "Scan Module - Test Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Complete test collection for Scan Module with 9 test cases + 4 error scenarios"
+  },
+  "item": [
+    {
+      "name": "TEST 1: Start Scanning Session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"testId\": \"{{test_id}}\",\n  \"name\": \"Сеанс сканирования класс 10A\",\n  \"description\": \"Сканирование контрольной работы по математике\",\n  \"deviceId\": \"iphone-teacher-001\",\n  \"deviceModel\": \"iPhone 14 Pro Max\",\n  \"metadata\": {\n    \"ocrLibrary\": \"TensorFlow\",\n    \"ocrVersion\": \"2.1.0\",\n    \"appVersion\": \"1.0.0\",\n    \"phoneOS\": \"iOS 16.2\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/scan/start-session",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "start-session"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has correct structure\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.equal(true);",
+              "    pm.expect(jsonData.data.id).to.exist;",
+              "});",
+              "",
+              "// Save session ID for next tests",
+              "var jsonData = pm.response.json();",
+              "pm.globals.set(\"session_id\", jsonData.data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 2: Submit Blank 1 (High Quality)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scanSessionId\": \"{{session_id}}\",\n  \"testId\": \"{{test_id}}\",\n  \"studentName\": \"Петров\",\n  \"studentLastName\": \"Иван\",\n  \"studentClass\": \"10A\",\n  \"testDate\": \"2026-02-08\",\n  \"answers\": {\n    \"1\": \"ABC\",\n    \"2\": \"123\",\n    \"3\": \"ВЕРНО\",\n    \"4\": \"Б\",\n    \"5\": \"45\",\n    \"6\": \"да\",\n    \"7\": \"синусоида\",\n    \"8\": \"8\",\n    \"9\": \"корень из 2\",\n    \"10\": \"параллельные\"\n  },\n  \"overallConfidence\": 0.95,\n  \"errorCorrections\": null,\n  \"isErrorCorrectionApplied\": false\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/scan/submit-blank",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "submit-blank"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.globals.set(\"blank_id_1\", jsonData.data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 3: Submit Blank 2 (Medium Quality)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scanSessionId\": \"{{session_id}}\",\n  \"testId\": \"{{test_id}}\",\n  \"studentName\": \"Сидоров\",\n  \"studentLastName\": \"Петр\",\n  \"studentClass\": \"10A\",\n  \"testDate\": \"2026-02-08\",\n  \"answers\": {\n    \"1\": \"ABC\",\n    \"2\": \"124\",\n    \"3\": \"НЕВЕРНО\",\n    \"4\": \"В\",\n    \"5\": \"45\",\n    \"6\": \"нет\",\n    \"7\": \"косинусоида\",\n    \"8\": \"8\",\n    \"9\": \"2\",\n    \"10\": \"пересекающиеся\"\n  },\n  \"overallConfidence\": 0.87,\n  \"errorCorrections\": null,\n  \"isErrorCorrectionApplied\": false\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/scan/submit-blank",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "submit-blank"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.globals.set(\"blank_id_2\", jsonData.data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 4: Submit Blank 3 (Low Quality)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scanSessionId\": \"{{session_id}}\",\n  \"testId\": \"{{test_id}}\",\n  \"studentName\": \"Иванов\",\n  \"studentLastName\": \"Сергей\",\n  \"studentClass\": \"10A\",\n  \"testDate\": \"2026-02-08\",\n  \"answers\": {\n    \"1\": \"A?C\",\n    \"2\": \"1?3\",\n    \"3\": \"ВЕРНО\",\n    \"4\": \"?\",\n    \"5\": \"45\",\n    \"6\": \"да\",\n    \"7\": \"непонятно\",\n    \"8\": \"?\",\n    \"9\": \"не знаю\",\n    \"10\": \"...\"\n  },\n  \"overallConfidence\": 0.62,\n  \"errorCorrections\": null,\n  \"isErrorCorrectionApplied\": false\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/scan/submit-blank",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "submit-blank"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.globals.set(\"blank_id_3\", jsonData.data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 5: Get All Blanks by Test",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/scan/test/{{test_id}}/blanks",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "test", "{{test_id}}", "blanks"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response is array with 3 items\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.be.an('array');",
+              "    pm.expect(jsonData.data.length).to.equal(3);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 6: Get All Blanks by Session",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/scan/session/{{session_id}}/blanks",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "session", "{{session_id}}", "blanks"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response is array with 3 items\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data.length).to.equal(3);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 7: Get Specific Blank",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/scan/blank/{{blank_id_1}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "blank", "{{blank_id_1}}"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response is object (not array)\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.be.an('object');",
+              "    pm.expect(jsonData.data.studentName).to.equal('Петров');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 8: Mark Blank for Review",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/scan/blank/{{blank_id_3}}/mark-review?reviewNotes=Low%20OCR%20confidence",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "blank", "{{blank_id_3}}", "mark-review"],
+          "query": [
+            {
+              "key": "reviewNotes",
+              "value": "Low OCR confidence"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"needsReview is true\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data.needsReview).to.equal(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 9: Apply Error Corrections",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/scan/blank/{{blank_id_2}}/apply-corrections",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "blank", "{{blank_id_2}}", "apply-corrections"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"reviewStatus is CORRECTED\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data.reviewStatus).to.equal('CORRECTED');",
+              "    pm.expect(jsonData.data.isErrorCorrectionApplied).to.equal(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "ERROR 1: Invalid Session ID",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scanSessionId\": \"invalid-uuid-000\",\n  \"testId\": \"{{test_id}}\",\n  \"studentName\": \"Test\",\n  \"studentLastName\": \"Student\",\n  \"studentClass\": \"10A\",\n  \"answers\": {\"1\": \"ABC\"},\n  \"overallConfidence\": 0.9\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/scan/submit-blank",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "submit-blank"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 404\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test(\"Error message is correct\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.equal(false);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "ERROR 2: No Auth Header",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/scan/blank/{{blank_id_1}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "blank", "{{blank_id_1}}"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 401\", function () {",
+              "    pm.response.to.have.status(401);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "ERROR 3: Non-existent Blank ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/scan/blank/00000000-0000-0000-0000-000000000000",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "blank", "00000000-0000-0000-0000-000000000000"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 404\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "ERROR 4: Apply Corrections Without Corrections",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/scan/blank/{{blank_id_1}}/apply-corrections",
+          "host": ["{{base_url}}"],
+          "path": ["api", "scan", "blank", "{{blank_id_1}}", "apply-corrections"]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"Error message is correct\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.equal(false);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "blank_id_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "blank_id_2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "blank_id_3",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
+

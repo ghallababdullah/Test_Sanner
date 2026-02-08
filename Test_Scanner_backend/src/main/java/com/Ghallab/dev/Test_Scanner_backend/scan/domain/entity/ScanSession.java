@@ -3,11 +3,8 @@ package com.Ghallab.dev.Test_Scanner_backend.scan.domain.entity;
 import com.Ghallab.dev.Test_Scanner_backend.shared.entity.BaseEntity;
 import com.Ghallab.dev.Test_Scanner_backend.auth.domain.entity.User;
 import com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.Test;
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 /**
  * ScanSession entity representing a scanning session
@@ -28,10 +25,10 @@ public class ScanSession extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private User user;
+    private User user; // Teacher who is scanning (has email in User table)
 
     @Column(name = "name", length = 200)
-    private String name;
+    private String name; // Name of this scanning session (e.g., "Сеанс 8 февраля класс 10A")
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
@@ -43,37 +40,12 @@ public class ScanSession extends BaseEntity {
     private String deviceModel;
 
     @Column(name = "total_blanks", nullable = false)
-    private Integer totalBlanks = 0;
-
-    @Column(name = "processed_blanks", nullable = false)
-    private Integer processedBlanks = 0;
-
-    @Column(name = "failed_blanks", nullable = false)
-    private Integer failedBlanks = 0;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private ScanStatus status = ScanStatus.PENDING;
+    private Integer totalBlanks = 0; // Total blanks scanned in this session
 
     @Column(name = "started_at", nullable = false)
     private java.time.LocalDateTime startedAt;
 
-    @Column(name = "completed_at")
-    private java.time.LocalDateTime completedAt;
-
-    @Column(name = "processing_time_ms")
-    private Integer processingTimeMs;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "metadata", columnDefinition = "jsonb")
-    private JsonNode metadata;
-
-    public enum ScanStatus {
-        PENDING,
-        PROCESSING,
-        COMPLETED,
-        FAILED,
-        CANCELLED
-    }
+    @Column(name = "metadata", columnDefinition = "TEXT")
+    private String metadata; // Device info as JSON string (e.g., {"ocrLibrary": "TensorFlow"})
 }
 
