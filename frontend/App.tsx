@@ -1,36 +1,24 @@
 /**
- * Template Scanner App
+ * Test Scanner App - Main Entry Point
+ * 
+ * Providers hierarchy:
+ * - ToastProvider: Provides toast notifications
+ * - AuthProvider: Manages authentication state and bootstraps session
+ * - RootNavigator: Switches between Auth and App stacks based on auth state
  */
 
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import ROITestScreen from './src/screens/ROITestScreen';
-
-// Create stack navigator
-const Stack = createStackNavigator();
+import { AuthProvider } from './src/context/AuthContext';
+import { ToastProvider } from './src/components/ui/Toast';
+import { RootNavigator } from './src/navigation/RootNavigator';
 
 function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: '#007AFF',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-        }}
-      >
-        <Stack.Screen 
-          name="ROITest" 
-          component={ROITestScreen} 
-          options={{ title: 'Template Scanner - ROI Test' }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <ToastProvider>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

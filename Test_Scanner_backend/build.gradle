@@ -10,7 +10,7 @@ description = 'a test scanner for automation the process of  grading students '
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(24)
+		languageVersion = JavaLanguageVersion.of(23)
 	}
 }
 
