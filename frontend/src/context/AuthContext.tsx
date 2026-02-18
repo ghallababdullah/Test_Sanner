@@ -127,10 +127,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             payload: {
               token,
               user: {
-                id: userInfo.userEmail, // Use email as ID
+                id: userInfo.userEmail,
                 email: userInfo.userEmail,
-                firstName: '',
-                lastName: '',
+                firstName: userInfo.firstName || '',
+                lastName: userInfo.lastName || '',
               },
             },
           });
@@ -162,9 +162,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('Invalid login response structure');
       }
 
-      // Backend returns flat user structure, not nested
+      // Backend returns email which is used as identifier for all endpoints
       const userData: User = {
-        id: response.data.email, // Use email as ID since backend doesn't provide id
+        id: response.data.email,
         email: response.data.email,
         firstName: response.data.firstName,
         lastName: response.data.lastName,

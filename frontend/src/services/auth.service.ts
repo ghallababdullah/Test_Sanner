@@ -57,11 +57,18 @@ class AuthService {
       const response = await apiClient.post<AuthResponse<LoginResponse>>('/api/auth/login', payload);
       const { data } = response.data;
 
-      // Store tokens
+      console.log('✅ Login successful for:', data.email);
+
+      // Store tokens and user info
+      // Backend now accepts email for all endpoints
       await AsyncStorage.setItem('accessToken', data.accessToken);
       await AsyncStorage.setItem('refreshToken', data.refreshToken);
-      await AsyncStorage.setItem('userId', data.email); // Use email as ID
+      await AsyncStorage.setItem('userId', data.email);
       await AsyncStorage.setItem('userEmail', data.email);
+      await AsyncStorage.setItem('firstName', data.firstName);
+      if (data.lastName) {
+        await AsyncStorage.setItem('lastName', data.lastName);
+      }
 
       // Set auth header
       await apiClient.setAuthToken(data.accessToken);
@@ -130,9 +137,10 @@ class AuthService {
       );
       const { data } = response.data;
 
-      // Store new tokens
+      // Store new tokens and email
       await AsyncStorage.setItem('accessToken', data.accessToken);
       await AsyncStorage.setItem('refreshToken', data.refreshToken);
+      await AsyncStorage.setItem('userId', data.email);
 
       // Set auth header
       await apiClient.setAuthToken(data.accessToken);
@@ -152,6 +160,8 @@ class AuthService {
       await AsyncStorage.removeItem('refreshToken');
       await AsyncStorage.removeItem('userId');
       await AsyncStorage.removeItem('userEmail');
+      await AsyncStorage.removeItem('firstName');
+      await AsyncStorage.removeItem('lastName');
       await apiClient.clearAuthToken();
     } catch (error) {
       console.error('Error logging out:', error);
@@ -172,13 +182,15 @@ class AuthService {
   /**
    * Get stored user info
    */
-  async getUserInfo(): Promise<{ userId: string; userEmail: string } | null> {
+  async getUserInfo(): Promise<{ userId: string; userEmail: string; firstName: string; lastName?: string } | null> {
     try {
       const userId = await AsyncStorage.getItem('userId');
       const userEmail = await AsyncStorage.getItem('userEmail');
+      const firstName = await AsyncStorage.getItem('firstName');
+      const lastName = await AsyncStorage.getItem('lastName');
 
-      if (userId && userEmail) {
-        return { userId, userEmail };
+      if (userId && userEmail && firstName) {
+        return { userId, userEmail, firstName, lastName: lastName || undefined };
       }
       return null;
     } catch (error) {

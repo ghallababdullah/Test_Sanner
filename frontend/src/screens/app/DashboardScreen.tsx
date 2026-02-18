@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -6,7 +6,6 @@ import {
   useColorScheme,
   TouchableOpacity,
   Text,
-  FlatList,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
@@ -16,69 +15,51 @@ import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../config/theme';
-import { testService, TestListItem } from '../../services/test.service';
+import { testService } from '../../services/test.service';
+import { resultsService } from '../../services/results.service';
 
 export const DashboardScreen = ({ navigation }: any) => {
   const { state: authState, signOut } = useAuth();
-  const { showError, showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const [tests, setTests] = useState<TestListItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({
+    totalTests: 0,
+    testsWithResults: 0,
+  });
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch tests from API
-  const fetchTests = async () => {
+  const loadStats = async () => {
     try {
       setLoading(true);
-      if (authState.user?.email) {
-        const response = await testService.getUserTests(authState.user.email);
-        setTests(response);
+      if (authState.user?.id) {
+        const tests = await testService.getUserTests(authState.user.id);
+        const results = await resultsService.getUserResults(authState.user.id);
+
+        setStats({
+          totalTests: tests.length,
+          testsWithResults: results.length,
+        });
       }
     } catch (error: any) {
-      showError(error.message || 'Failed to load tests');
+      console.log('Note: Some stats could not be loaded');
     } finally {
       setLoading(false);
     }
   };
 
-  // Load tests on screen focus
   useFocusEffect(
     useCallback(() => {
-      fetchTests();
-    }, [])
+      loadStats();
+    }, [authState.user?.id])
   );
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchTests();
+    await loadStats();
     setRefreshing(false);
-  };
-
-  const handleCreateTest = () => {
-    navigation.navigate('Tests', { screen: 'CreateTest' });
-  };
-
-  const handleTestPress = (test: TestListItem) => {
-    navigation.navigate('Tests', {
-      screen: 'TestDetails',
-      params: { testId: test.id },
-    });
-  };
-
-  const handleEditTest = (testId: string) => {
-    navigation.navigate('Tests', {
-      screen: 'EditTest',
-      params: { testId },
-    });
-  };
-
-  const handleStartScanning = (testId: string) => {
-    navigation.navigate('Scan', {
-      screen: 'ScannerHub',
-      params: { testId },
-    });
   };
 
   const handleLogout = async () => {
@@ -94,150 +75,110 @@ export const DashboardScreen = ({ navigation }: any) => {
   const textColor = isDark ? COLORS.darkText : COLORS.lightText;
   const cardBg = isDark ? COLORS.darkCard : COLORS.lightCard;
 
-  const renderTestCard = ({ item: test }: { item: TestListItem }) => (
-    <Card>
-      {/* Header with title and status */}
-      <View style={styles.cardHeader}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.testTitle, { color: textColor }]}>
-            {test.title}
-          </Text>
-          <Text style={[styles.testMeta, { color: isDark ? COLORS.darkGray : COLORS.lightGray }]}>
-            {test.subject} • {test.classLevel} • {test.totalQuestions} Q
-          </Text>
-        </View>
-
-        {/* Status badge */}
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: test.isActive ? COLORS.success : COLORS.warning,
-            },
-          ]}
-        >
-          <Text style={styles.statusText}>
-            {test.isActive ? 'Active' : 'Inactive'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Stats row */}
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <Text style={[styles.statLabel, { color: isDark ? COLORS.darkGray : COLORS.lightGray }]}>
-            Max Score
-          </Text>
-          <Text style={[styles.statValue, { color: textColor }]}>
-            {test.maxScore}
-          </Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={[styles.statLabel, { color: isDark ? COLORS.darkGray : COLORS.lightGray }]}>
-            Created
-          </Text>
-          <Text style={[styles.statValue, { color: textColor }]}>
-            {test.createdAt}
-          </Text>
-        </View>
-      </View>
-
-      {/* Action buttons */}
-      <View style={styles.actionButtons}>
-        <Button
-          label="View"
-          onPress={() => handleTestPress(test)}
-          size="small"
-          variant="outline"
-          style={{ flex: 1, marginRight: SPACING.md }}
-        />
-        <Button
-          label="Scan"
-          onPress={() => handleStartScanning(test.id)}
-          size="small"
-          variant="secondary"
-          style={{ flex: 1, marginRight: SPACING.md }}
-        />
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => handleEditTest(test.id)}
-        >
-          <Text style={[styles.menuIcon, { color: textColor }]}>⋮</Text>
-        </TouchableOpacity>
-      </View>
-    </Card>
-  );
+  const userFirstName = authState.user?.firstName || 'User';
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
-      {/* Header */}
-      <View style={styles.headerContainer}>
-        <View>
-          <Text style={[styles.greeting, { color: textColor }]}>
-            Hello, {authState.user?.firstName || 'Teacher'}
-          </Text>
-          <Text style={[styles.subtitle, { color: isDark ? COLORS.darkGray : COLORS.lightGray }]}>
-            Manage your tests and start scanning
-          </Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+      >
+        {/* Header with greeting */}
+        <View style={styles.headerSection}>
+          <View>
+            <Text style={[styles.greeting, { color: textColor }]}>
+              👋 Hello, {userFirstName}!
+            </Text>
+            <Text style={[styles.subtitle, { color: textColor, opacity: 0.7 }]}>
+              Welcome to Test Scanner
+            </Text>
+          </View>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <Text style={[styles.logoutText, { color: COLORS.primary }]}>
+              Logout
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Logout button (top right) */}
-        <TouchableOpacity
-          style={[styles.avatarButton, { backgroundColor: COLORS.primary }]}
-          onPress={handleLogout}
-        >
-          <Text style={styles.avatarText}>
-            {authState.user?.firstName?.charAt(0).toUpperCase() || 'U'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        {/* Stats Cards */}
+        {!loading ? (
+          <View style={styles.statsContainer}>
+            <Card style={[styles.statCard, { backgroundColor: cardBg }]}>
+              <Text style={[styles.statValue, { color: COLORS.primary }]}>
+                {stats.totalTests}
+              </Text>
+              <Text style={[styles.statLabel, { color: textColor, opacity: 0.7 }]}>
+                Total Tests
+              </Text>
+            </Card>
 
-      {/* Quick action buttons */}
-      <View style={styles.quickActions}>
-        <Button
-          label="+ Create Test"
-          onPress={handleCreateTest}
-          fullWidth
-        />
-      </View>
+            <Card style={[styles.statCard, { backgroundColor: cardBg }]}>
+              <Text style={[styles.statValue, { color: COLORS.secondary }]}>
+                {stats.testsWithResults}
+              </Text>
+              <Text style={[styles.statLabel, { color: textColor, opacity: 0.7 }]}>
+                Tests with Results
+              </Text>
+            </Card>
+          </View>
+        ) : (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        )}
 
-      {/* Tests list */}
-      {loading && !refreshing ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
-      ) : tests.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyIcon]}>📋</Text>
-          <Text style={[styles.emptyTitle, { color: textColor }]}>
-            No tests yet
+        {/* Quick Access Section */}
+        <View style={styles.quickAccessSection}>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>
+            Quick Access
           </Text>
-          <Text style={[styles.emptySubtitle, { color: isDark ? COLORS.darkGray : COLORS.lightGray }]}>
-            Create your first test to get started
-          </Text>
+
           <Button
-            label="Create Test"
-            onPress={handleCreateTest}
-            style={styles.emptyButton}
+            label="📝 My Tests"
+            onPress={() => navigation.navigate('Tests', { screen: 'TestsList' })}
+            style={styles.quickButton}
+          />
+
+          <Button
+            label="📊 View Results"
+            onPress={() => navigation.navigate('Results')}
+            variant="secondary"
+            style={styles.quickButton}
+          />
+
+          <Button
+            label="📸 Start Scanning"
+            onPress={() => navigation.navigate('Scan')}
+            variant="outline"
+            style={styles.quickButton}
           />
         </View>
-      ) : (
-        <FlatList
-          data={tests}
-          renderItem={renderTestCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          scrollEnabled={true}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={COLORS.primary}
-            />
-          }
-        />
-      )}
+
+        {/* Info Section */}
+        <Card style={[styles.infoCard, { backgroundColor: cardBg }]}>
+          <Text style={[styles.infoTitle, { color: textColor }]}>
+            👤 Account Info
+          </Text>
+          <View style={styles.infoItem}>
+            <Text style={[styles.infoLabel, { color: textColor, opacity: 0.7 }]}>
+              Email
+            </Text>
+            <Text style={[styles.infoValue, { color: textColor }]}>
+              {authState.user?.email}
+            </Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Text style={[styles.infoLabel, { color: textColor, opacity: 0.7 }]}>
+              Name
+            </Text>
+            <Text style={[styles.infoValue, { color: textColor }]}>
+              {authState.user?.firstName} {authState.user?.lastName}
+            </Text>
+          </View>
+        </Card>
+      </ScrollView>
     </View>
   );
 };
@@ -246,127 +187,83 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerContainer: {
+  scrollContent: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+  },
+  headerSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: SPACING.lg,
-    paddingTop: SPACING.xl,
+    marginBottom: SPACING.xl,
   },
   greeting: {
-    ...TYPOGRAPHY.h1,
-    marginBottom: SPACING.sm,
+    ...TYPOGRAPHY.h2,
+    marginBottom: SPACING.xs,
   },
   subtitle: {
     ...TYPOGRAPHY.body,
   },
-  avatarButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    ...TYPOGRAPHY.h2,
-    color: COLORS.white,
-    fontWeight: 'bold',
-  },
-  quickActions: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.lg,
-  },
-  listContainer: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.xl,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.lg,
-  },
-  testTitle: {
-    ...TYPOGRAPHY.h2,
-    marginBottom: SPACING.xs,
-  },
-  testMeta: {
-    ...TYPOGRAPHY.caption,
-  },
-  statusBadge: {
+  logoutButton: {
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.full,
+    paddingVertical: SPACING.sm,
   },
-  statusText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.white,
+  logoutText: {
+    ...TYPOGRAPHY.body,
     fontWeight: '600',
   },
-  statsRow: {
+  statsContainer: {
     flexDirection: 'row',
-    marginBottom: SPACING.lg,
-    paddingBottom: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
+    gap: SPACING.md,
+    marginBottom: SPACING.xl,
   },
-  statItem: {
+  statCard: {
     flex: 1,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
     justifyContent: 'center',
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: COLORS.lightGray,
-    marginHorizontal: SPACING.md,
-  },
-  statLabel: {
-    ...TYPOGRAPHY.caption,
-    marginBottom: SPACING.xs,
+    alignItems: 'center',
   },
   statValue: {
-    ...TYPOGRAPHY.h2,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  menuButton: {
-    padding: SPACING.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuIcon: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: SPACING.xl,
-  },
-  emptyTitle: {
     ...TYPOGRAPHY.h1,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  statLabel: {
+    ...TYPOGRAPHY.small,
     textAlign: 'center',
   },
-  emptySubtitle: {
-    ...TYPOGRAPHY.body,
-    textAlign: 'center',
+  loadingContainer: {
+    height: 150,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: SPACING.xl,
   },
-  emptyButton: {
-    marginTop: SPACING.lg,
+  quickAccessSection: {
+    marginBottom: SPACING.xl,
+  },
+  sectionTitle: {
+    ...TYPOGRAPHY.h3,
+    marginBottom: SPACING.md,
+  },
+  quickButton: {
+    marginBottom: SPACING.md,
+  },
+  infoCard: {
+    marginBottom: SPACING.xl,
+  },
+  infoTitle: {
+    ...TYPOGRAPHY.h3,
+    marginBottom: SPACING.md,
+  },
+  infoItem: {
+    marginBottom: SPACING.md,
+  },
+  infoLabel: {
+    ...TYPOGRAPHY.small,
+    marginBottom: SPACING.xs,
+  },
+  infoValue: {
+    ...TYPOGRAPHY.body,
   },
 });

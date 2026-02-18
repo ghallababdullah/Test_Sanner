@@ -23,17 +23,19 @@ export interface AnswerKey {
   testId: string;
   questionNumber: number;
   correctAnswer: string;
-  explanation?: string;
+  maxPoints: number;
+  toleranceLevel?: number;
+  answerType: 'TEXT' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
   createdAt: string;
 }
 
 export interface GradeThreshold {
   id: string;
   testId: string;
-  minScore: number;
-  maxScore: number;
-  grade: string;
-  percentage?: number;
+  gradeName: string;
+  gradeSymbol: string;
+  minPercentage: number;
+  maxPercentage: number;
 }
 
 export interface CreateTestPayload {
@@ -62,10 +64,10 @@ class TestService {
   /**
    * Get all tests for current user
    */
-  async getUserTests(userEmail: string): Promise<TestListItem[]> {
+  async getUserTests(userId: string): Promise<TestListItem[]> {
     try {
       const response = await apiClient.get<ApiResponse<TestListItem[]>>(
-        `/api/tests/user/${userEmail}`
+        `/api/tests/user/${userId}`
       );
       return response.data.data || [];
     } catch (error: any) {
@@ -92,12 +94,15 @@ class TestService {
    */
   async createTest(payload: CreateTestPayload): Promise<TestDetails> {
     try {
+      console.log('📝 Creating test with payload:', JSON.stringify(payload, null, 2));
       const response = await apiClient.post<ApiResponse<TestDetails>>(
-        '/api/tests',
+        '/api/tests/create-test',
         payload
       );
+      console.log('✅ Test created:', response.data.data);
       return response.data.data;
     } catch (error: any) {
+      console.error('❌ Create test error:', error);
       throw new Error(apiClient.getErrorMessage(error));
     }
   }
@@ -167,12 +172,20 @@ class TestService {
     payload: Omit<AnswerKey, 'id' | 'testId' | 'createdAt'>
   ): Promise<AnswerKey> {
     try {
+      // Include testId in the payload as the backend expects it
+      const payloadWithTestId = {
+        testId,
+        ...payload,
+      };
+      console.log('📝 Adding answer key:', JSON.stringify(payloadWithTestId, null, 2));
       const response = await apiClient.post<ApiResponse<AnswerKey>>(
         `/api/tests/${testId}/answer-keys`,
-        payload
+        payloadWithTestId
       );
+      console.log('✅ Answer key created:', response.data.data);
       return response.data.data;
     } catch (error: any) {
+      console.error('❌ Add answer key error:', error);
       throw new Error(apiClient.getErrorMessage(error));
     }
   }
@@ -231,12 +244,22 @@ class TestService {
     payload: Omit<GradeThreshold, 'id' | 'testId'>
   ): Promise<GradeThreshold> {
     try {
-      const response = await apiClient.post<ApiResponse<GradeThreshold>>(
+      // Include testId in the payload as the backend expects it
+      const payloadWithTestId = {
+        testId,
+        ...payload,
+      };
+      console.log('📝 Adding grade threshold:', JSON.stringify(payloadWithTestId, null, 2));
+      // Backend expects an array of grade thresholds, not a single object
+      const response = await apiClient.post<ApiResponse<GradeThreshold[]>>(
         `/api/tests/${testId}/grade-thresholds`,
-        payload
+        [payloadWithTestId]
       );
-      return response.data.data;
+      console.log('✅ Grade threshold created:', response.data.data);
+      // Return the first item from the array
+      return response.data.data[0] || payloadWithTestId as any;
     } catch (error: any) {
+      console.error('❌ Add grade threshold error:', error);
       throw new Error(apiClient.getErrorMessage(error));
     }
   }

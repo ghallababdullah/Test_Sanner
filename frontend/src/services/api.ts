@@ -62,6 +62,8 @@ class ApiClient {
       },
       async (error: AxiosError) => {
         console.log('❌ Response Error:', error.message);
+        console.log('❌ Status:', error.response?.status);
+        console.log('❌ Data:', error.response?.data);
         
         const originalRequest = error.config as any;
 
@@ -171,8 +173,24 @@ class ApiClient {
    * Get error message from response
    */
   getErrorMessage(error: any): string {
+    console.log('🔍 Error details:', {
+      status: error.response?.status,
+      message: error.response?.data?.message,
+      data: error.response?.data,
+      error: error.message
+    });
+
     if (error.response?.data?.message) {
       return error.response.data.message;
+    }
+    if (error.response?.data?.error) {
+      return error.response.data.error;
+    }
+    if (error.response?.data) {
+      // If response is a string or has other properties
+      return typeof error.response.data === 'string' 
+        ? error.response.data 
+        : JSON.stringify(error.response.data);
     }
     if (error.message) {
       return error.message;

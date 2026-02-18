@@ -3,6 +3,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text } from 'react-native';
 import { DashboardScreen } from '../screens/app/DashboardScreen';
+import { TestsNavigator } from './TestsNavigator';
+import { ResultsNavigator } from './ResultsNavigator';
 import { COLORS, TYPOGRAPHY } from '../config/theme';
 
 const Stack = createNativeStackNavigator();
@@ -16,39 +18,15 @@ const PlaceholderScreen = ({ title }: { title: string }) => (
   </View>
 );
 
+// Screen components for scan stack
+const ScannerHubScreen = () => <PlaceholderScreen title="Scanner Hub" />;
+const SessionsListScreen = () => <PlaceholderScreen title="Sessions" />;
+
 // Test Stack
-const TestStack = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerShown: true,
-      headerTintColor: COLORS.white,
-      headerStyle: {
-        backgroundColor: COLORS.primary,
-      },
-      headerTitleStyle: {
-        ...TYPOGRAPHY.h2,
-        color: COLORS.white,
-        fontWeight: '600',
-      },
-    }}
-  >
-    <Stack.Screen
-      name="CreateTest"
-      component={() => <PlaceholderScreen title="Create Test" />}
-      options={{ title: 'Create Test' }}
-    />
-    <Stack.Screen
-      name="EditTest"
-      component={() => <PlaceholderScreen title="Edit Test" />}
-      options={{ title: 'Edit Test' }}
-    />
-    <Stack.Screen
-      name="TestDetails"
-      component={() => <PlaceholderScreen title="Test Details" />}
-      options={{ title: 'Test Details' }}
-    />
-  </Stack.Navigator>
-);
+const TestStack = () => <TestsNavigator />;
+
+// Results Stack
+const ResultStack = () => <ResultsNavigator />;
 
 // Scan Stack
 const ScanStack = () => (
@@ -68,40 +46,19 @@ const ScanStack = () => (
   >
     <Stack.Screen
       name="ScannerHub"
-      component={() => <PlaceholderScreen title="Scanner Hub" />}
+      component={ScannerHubScreen}
       options={{ title: 'Scanner' }}
     />
     <Stack.Screen
       name="SessionsList"
-      component={() => <PlaceholderScreen title="Sessions" />}
+      component={SessionsListScreen}
       options={{ title: 'Scanning Sessions' }}
     />
   </Stack.Navigator>
 );
 
 // Results Stack
-const ResultsStack = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerShown: true,
-      headerTintColor: COLORS.white,
-      headerStyle: {
-        backgroundColor: COLORS.primary,
-      },
-      headerTitleStyle: {
-        ...TYPOGRAPHY.h2,
-        color: COLORS.white,
-        fontWeight: '600',
-      },
-    }}
-  >
-    <Stack.Screen
-      name="ResultsList"
-      component={() => <PlaceholderScreen title="Test Results" />}
-      options={{ title: 'Results' }}
-    />
-  </Stack.Navigator>
-);
+const ResultsStack = () => <ResultStack />;
 
 // Main bottom tab navigator
 const TabNavigator = () => {
