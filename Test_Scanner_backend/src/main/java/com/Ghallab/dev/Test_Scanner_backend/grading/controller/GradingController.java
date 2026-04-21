@@ -36,7 +36,7 @@ public class GradingController {
      * POST /api/grading/evaluate
      * Evaluate student answers and generate grading result
      *
-     * @param request - GradingRequest with testId, userId, and answers
+     * @param request - GradingRequest with testId, userEmail, and answers
      * @return GradingResponse with scoring details
      */
     @PostMapping("/evaluate")
@@ -44,7 +44,7 @@ public class GradingController {
             @Valid @RequestBody GradingRequest request,
             Authentication authentication) {
 
-        log.info("📊 POST /api/grading/evaluate - Evaluating test for user: {}", request.getUserId());
+        log.info("📊 POST /api/grading/evaluate - Evaluating test for user: {}", request.getUserEmail());
 
         Response<GradingResponse> response = gradingService.evaluateTest(request);
 
@@ -75,20 +75,20 @@ public class GradingController {
     }
 
     /**
-     * GET /api/grading/results/user/{userId}
-     * Get all grading results for a specific user
+     * GET /api/grading/results/user/{userEmail}
+     * Get all grading results for a specific user by email
      *
-     * @param userId - User ID
+     * @param userEmail - User email address
      * @return List of GradingResponse for the user
      */
-    @GetMapping("/results/user/{userId}")
+    @GetMapping("/results/user/{userEmail}")
     public ResponseEntity<Response<List<GradingResponse>>> getResultsByUser(
-            @PathVariable UUID userId,
+            @PathVariable String userEmail,
             Authentication authentication) {
 
-        log.info("🔍 GET /api/grading/results/user/{} - Retrieving results for user", userId);
+        log.info("🔍 GET /api/grading/results/user/{} - Retrieving results for user", userEmail);
 
-        Response<List<GradingResponse>> response = gradingService.getResultsByUser(userId);
+        Response<List<GradingResponse>> response = gradingService.getResultsByUser(userEmail);
 
         log.info("✅ User results retrieved successfully");
         return ResponseEntity.ok(response);

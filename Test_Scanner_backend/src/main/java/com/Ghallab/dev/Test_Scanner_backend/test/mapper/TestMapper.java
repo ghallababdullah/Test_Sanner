@@ -73,21 +73,38 @@ public class TestMapper {
     /**
      * Преобразует Test Entity в TestWithDetailsResponse DTO
      * Включает все детали: ответы и пороги оценок
+     * ВАЖНО: Используем РУЧНОЕ маппирование вместо ModelMapper
+     * чтобы избежать проблем с PersistentBag коллекциями из Hibernate
      */
     public TestWithDetailsResponse toTestWithDetailsResponse(
             Test test,
             List<AnswerKey> answerKeys,
             List<GradeThreshold> gradeThresholds) {
-        TestWithDetailsResponse response = modelMapper.map(test, TestWithDetailsResponse.class);
+
+        // ✅ Ручное маппирование - избегаем PersistentBag из Hibernate
+        TestWithDetailsResponse response = new TestWithDetailsResponse();
+        response.setId(test.getId());
+        response.setTitle(test.getTitle());
+        response.setClassLevel(test.getClassLevel());
+        response.setSubject(test.getSubject());
+        response.setDescription(test.getDescription());
+        response.setTotalQuestions(test.getTotalQuestions());
+        response.setMaxScore(test.getMaxScore());
+        response.setIsActive(test.getIsActive());
+        response.setCreatedAt(test.getCreatedAt());
+
         if (test.getCreator() != null) {
             response.setCreatorId(test.getCreator().getId());
         }
+
+        // ✅ Маппим уже готовые списки (они не содержат PersistentBag)
         response.setAnswerKeys(answerKeys.stream()
                 .map(this::toAnswerKeyResponse)
                 .collect(Collectors.toList()));
         response.setGradeThresholds(gradeThresholds.stream()
                 .map(this::toGradeThresholdResponse)
                 .collect(Collectors.toList()));
+
         return response;
     }
 

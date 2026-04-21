@@ -23,9 +23,11 @@ public interface GradingResultRepository extends JpaRepository<GradingResult, UU
     List<GradingResult> findByTestId(UUID testId);
 
     /**
-     * Find all grading results for a specific user
+     * Find all grading results for a specific user by email
+     * Uses JOIN to User table to match by email
      */
-    List<GradingResult> findByUserId(UUID userId);
+    @Query("SELECT gr FROM GradingResult gr JOIN gr.user u WHERE u.email = :email")
+    List<GradingResult> findByUserEmail(@Param("email") String email);
 
     /**
      * Find grading result for a specific student and test

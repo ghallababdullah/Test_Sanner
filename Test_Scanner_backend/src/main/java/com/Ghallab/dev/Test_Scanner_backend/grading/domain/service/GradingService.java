@@ -23,9 +23,9 @@ public interface GradingService {
     Response<List<GradingResponse>> getResultsByTest(UUID testId);
 
     /**
-     * Get all grading results for a specific user
+     * Get all grading results for a specific user by email
      */
-    Response<List<GradingResponse>> getResultsByUser(UUID userId);
+    Response<List<GradingResponse>> getResultsByUser(String userEmail);
 
     /**
      * Get detailed answer information for a grading result

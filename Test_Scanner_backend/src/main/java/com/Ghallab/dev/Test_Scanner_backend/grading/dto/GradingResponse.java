@@ -21,7 +21,7 @@ public class GradingResponse {
 
     private UUID gradingResultId;
     private UUID testId;
-    private UUID userId;
+    private String userEmail;
 
     // Student information from the blank
     private String studentName;

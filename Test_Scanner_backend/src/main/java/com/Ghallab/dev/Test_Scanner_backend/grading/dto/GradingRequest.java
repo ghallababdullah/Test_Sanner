@@ -17,7 +17,7 @@ import java.util.UUID;
 public class GradingRequest {
 
     private UUID testId;
-    private UUID userId;
+    private String userEmail;
 
     // Student information from the blank/paper
     private String studentName;

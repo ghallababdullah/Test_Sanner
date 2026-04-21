@@ -30,7 +30,7 @@ public class GradingMapper {
         GradingResponse response = GradingResponse.builder()
             .gradingResultId(gradingResult.getId())
             .testId(gradingResult.getTest().getId())
-            .userId(gradingResult.getUser().getId())
+            .userEmail(gradingResult.getUser().getEmail())
             .studentName(gradingResult.getStudentName())
             .studentLastName(gradingResult.getStudentLastName())
             .studentClass(gradingResult.getStudentClass())

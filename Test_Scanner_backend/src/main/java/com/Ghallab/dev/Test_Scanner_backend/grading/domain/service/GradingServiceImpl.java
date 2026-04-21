@@ -49,7 +49,7 @@ public class GradingServiceImpl implements GradingService {
     @Override
     @Transactional
     public Response<GradingResponse> evaluateTest(GradingRequest request) {
-        log.info("🎯 Starting test evaluation for test: {} and user: {}", request.getTestId(), request.getUserId());
+        log.info("🎯 Starting test evaluation for test: {} and user: {}", request.getTestId(), request.getUserEmail());
 
         try {
             // ✅ Fetch Test
@@ -60,11 +60,11 @@ public class GradingServiceImpl implements GradingService {
                     });
             log.debug("✅ Test found: {}", test.getTitle());
 
-            // ✅ Fetch User
-            User user = userRepository.findById(request.getUserId())
+            // ✅ Fetch User by email
+            User user = userRepository.findByEmail(request.getUserEmail())
                     .orElseThrow(() -> {
-                        log.error("❌ User not found: {}", request.getUserId());
-                        return new NotFoundException("User not found with id: " + request.getUserId());
+                        log.error("❌ User not found: {}", request.getUserEmail());
+                        return new NotFoundException("User not found with email: " + request.getUserEmail());
                     });
             log.debug("✅ User found: {}", user.getEmail());
 
@@ -220,10 +220,10 @@ public class GradingServiceImpl implements GradingService {
 
     @Override
     @Transactional(readOnly = true)
-    public Response<List<GradingResponse>> getResultsByUser(UUID userId) {
-        log.info("🔍 Retrieving grading results for user: {}", userId);
+    public Response<List<GradingResponse>> getResultsByUser(String userEmail) {
+        log.info("🔍 Retrieving grading results for user: {}", userEmail);
 
-        List<GradingResult> results = gradingResultRepository.findByUserId(userId);
+        List<GradingResult> results = gradingResultRepository.findByUserEmail(userEmail);
         List<GradingResponse> responses = gradingMapper.toGradingResponseList(results);
 
         log.info("✅ Found {} grading results for user", results.size());

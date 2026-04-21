@@ -29,6 +29,7 @@ public class TestWithDetailsResponse {
     private Boolean isActive;
 
     private UUID creatorId;
+    private String classLevel;
 
     private LocalDateTime createdAt;
 
