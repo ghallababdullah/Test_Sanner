@@ -17,14 +17,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * ScannedBlank entity representing a single scanned exam blank
- * Contains ONLY RAW OCR DATA - NO SCORING/GRADING
+ * ScannedBlank entity representing a single scanned exam blank upload.
  *
  * This entity stores:
- * - Student information extracted from the blank
- * - Raw OCR answers (as JSON string)
+ * - Original uploaded image path
+ * - OCR extracted answers (as JSON string) once processing completes
  * - Error corrections made by student on the blank (as JSON string)
- * - OCR quality metrics
+ * - OCR quality metrics and processing state
  *
  * Grading is handled by GradingResult in the grading module
  */
@@ -50,7 +49,7 @@ public class ScannedBlank extends BaseEntity {
     private User scannedBy; // User who scanned (teacher)
 
     // ==================== STUDENT INFO (FROM BLANK) ====================
-    @Column(name = "student_name", nullable = false, length = 200)
+    @Column(name = "student_name", length = 200)
     private String studentName;
 
     @Column(name = "student_class", length = 50)
@@ -60,13 +59,23 @@ public class ScannedBlank extends BaseEntity {
     private LocalDate testDate;
 
     // ==================== RAW ANSWERS (OCR EXTRACTION) ====================
-    @Column(name = "answers", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "answers", columnDefinition = "TEXT")
     private String answers; // Original extracted answers from OCR (JSON string format)
+
+    @Column(name = "original_image_path", nullable = false, length = 500)
+    private String originalImagePath;
+
+    @Column(name = "processed_image_path", length = 500)
+    private String processedImagePath;
+
+    @Column(name = "thumbnail_path", length = 500)
+    private String thumbnailPath;
 
     // ==================== ERROR CORRECTIONS ====================
     @Column(name = "error_corrections", columnDefinition = "TEXT")
     private String errorCorrections; // Student corrections on the blank (JSON string format)
 
+    @Builder.Default
     @Column(name = "is_error_correction_applied", nullable = false)
     private Boolean isErrorCorrectionApplied = false;
 
@@ -76,12 +85,22 @@ public class ScannedBlank extends BaseEntity {
     @Column(name = "overall_confidence", precision = 5, scale = 4)
     private BigDecimal overallConfidence; // Quality of OCR recognition
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "processing_status", nullable = false, length = 32)
+    private ProcessingStatus processingStatus = ProcessingStatus.PENDING_OCR;
+
+    @Column(name = "processing_error", columnDefinition = "TEXT")
+    private String processingError;
+
+    @Builder.Default
     @Column(name = "needs_review", nullable = false)
     private Boolean needsReview = false; // Flag for manual review
 
     @Column(name = "review_notes", columnDefinition = "TEXT")
     private String reviewNotes;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "review_status", nullable = false)
     private ReviewStatus reviewStatus = ReviewStatus.PENDING;
@@ -93,9 +112,20 @@ public class ScannedBlank extends BaseEntity {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
+    @Column(name = "processed_at")
+    private LocalDateTime processedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by")
     private User reviewedBy;
+
+    public enum ProcessingStatus {
+        PENDING_OCR,
+        QUEUED,
+        PROCESSING,
+        OCR_COMPLETED,
+        OCR_FAILED
+    }
 
     public enum ReviewStatus {
         PENDING,    // Waiting for review

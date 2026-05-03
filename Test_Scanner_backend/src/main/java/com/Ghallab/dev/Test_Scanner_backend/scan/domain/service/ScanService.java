@@ -2,6 +2,7 @@ package com.Ghallab.dev.Test_Scanner_backend.scan.domain.service;
 
 import com.Ghallab.dev.Test_Scanner_backend.common.Response.Response;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScanSessionResponse;
+import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScannedBlankDetailedResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScannedBlankResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.StartScanSessionRequest;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.UploadScannedBlankRequest;
@@ -10,8 +11,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * ScanService interface for scanning operations
- * Handles raw data extraction from scanned blanks (OCR data)
+ * ScanService interface for scanning operations.
+ * Handles scan intake and OCR lifecycle for scanned blanks.
  * Does NOT handle grading - that's GradingService's job
  */
 public interface ScanService {
@@ -23,8 +24,7 @@ public interface ScanService {
     Response<ScanSessionResponse> startScanSession(StartScanSessionRequest request);
 
     /**
-     * Submit a scanned blank with extracted OCR data
-     * Frontend performs OCR on phone, backend saves the raw data
+     * Receive an uploaded scanned blank image and create an OCR job record.
      */
     Response<ScannedBlankResponse> submitScannedBlank(UploadScannedBlankRequest request);
 
@@ -44,6 +44,11 @@ public interface ScanService {
     Response<ScannedBlankResponse> getScannedBlankById(UUID blankId);
 
     /**
+     * Get a scanned blank together with final answers and scoring details.
+     */
+    Response<ScannedBlankDetailedResponse> getScannedBlankDetails(UUID blankId);
+
+    /**
      * Mark scanned blank as needs review
      */
     Response<ScannedBlankResponse> markForReview(UUID blankId, String reviewNotes);
@@ -53,5 +58,10 @@ public interface ScanService {
      * Takes errorCorrections from request and applies them
      */
     Response<ScannedBlankResponse> applyErrorCorrections(UUID blankId, Object errorCorrections);
+
+    /**
+     * Retry OCR for a specific scanned blank by re-publishing its OCR job.
+     */
+    Response<ScannedBlankResponse> retryOcr(UUID blankId);
 }
 

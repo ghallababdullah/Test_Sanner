@@ -92,6 +92,58 @@ EXPECTED_ROI_NAMES = (
      for part in ("num", "answer")]
 )
 
+def remove_grid_lines(crop_rgb, debug=False):
+    """
+    Removes printed horizontal/vertical grid lines from a cropped ROI.
+    
+    Args:
+        crop_rgb (np.ndarray): RGB image (height x width x 3)
+        debug (bool): if True, show intermediate binary masks
+        
+    Returns:
+        cleaned RGB image (same size) with lines removed (set to white)
+    """
+    # 1. Grayscale
+    gray = cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2GRAY)
+    h, w = gray.shape
+
+    # 2. Adaptive threshold to get binary image (ink = white)
+    binary = cv2.adaptiveThreshold(gray, 255,
+                                   cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY_INV, 51, 10)
+
+    # 3. Detect horizontal lines
+    # Kernel width = image width / 2 (ensures we catch full lines), height = 1
+    horiz_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (w // 2, 1))
+    horiz_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, horiz_kernel)
+
+    # 4. Detect vertical lines
+    vert_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, h // 2))
+    vert_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, vert_kernel)
+
+    # 5. Combine line masks
+    line_mask = cv2.bitwise_or(horiz_lines, vert_lines)
+
+    # Optional: dilate a bit to cover the line thickness
+    kernel = np.ones((2,2), np.uint8)
+    line_mask = cv2.dilate(line_mask, kernel, iterations=1)
+
+    if debug:
+        cv2.imshow("Binary (ink)", binary)
+        cv2.imshow("Horizontal lines", horiz_lines)
+        cv2.imshow("Vertical lines", vert_lines)
+        cv2.imshow("Line mask", line_mask)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    # 6. Remove lines from the original grayscale image
+    # Set all pixels in the mask to white (255)
+    gray_cleaned = gray.copy()
+    gray_cleaned[line_mask == 255] = 255
+
+    # Convert back to RGB (all three channels same)
+    cleaned_rgb = cv2.cvtColor(gray_cleaned, cv2.COLOR_GRAY2RGB)
+    return cleaned_rgb
 def load_rois_from_json(
         json_path: str) -> Dict[str, Tuple[int,int,int,int]]:
     """Load ROI definitions from rois.json saved by roi_mapper.py."""
@@ -100,12 +152,38 @@ def load_rois_from_json(
     return {k: tuple(v) for k, v in data.items()}
 
 
+def validate_rois(
+        definitions: Dict[str, Tuple[int,int,int,int]]) -> bool:
+    """Check all expected ROIs are present and non-zero."""
+    print("\n[validate_rois]")
+    missing  = []
+    zero     = []
+    ok_count = 0
+
+    for name in EXPECTED_ROI_NAMES:
+        if name not in definitions:
+            missing.append(name)
+        elif definitions[name] == (0, 0, 0, 0):
+            zero.append(name)
+        else:
+            ok_count += 1
+
+    if missing:
+        print(f"  ✗ Missing  ({len(missing)}): {missing}")
+    if zero:
+        print(f"  ✗ Unfilled ({len(zero)}): {zero}")
+    if ok_count == len(EXPECTED_ROI_NAMES):
+        print(f"  ✓ All {ok_count} ROIs defined correctly")
+        return True
+    print(f"  ✓ {ok_count} / {len(EXPECTED_ROI_NAMES)} defined")
+    return False
 
 
 def extract_all_rois(
     roi_final_rgb: np.ndarray,
     definitions:   Dict[str, Tuple[int,int,int,int]] = None,
     pad:           int  = 2,
+    remove_lines:  bool = True,
     debug:         bool = False,
     debug_out_dir: str  = "debug_rois",
 ) -> Dict[str, np.ndarray]:
@@ -116,6 +194,7 @@ def extract_all_rois(
         roi_final_rgb : aligned RGB image (1240×1754)
         definitions   : {name: (x1,y1,x2,y2)}
         pad           : extra pixels around each crop
+        remove_lines  : whether to run printed grid/line cleanup on each ROI
         debug         : save annotated image + crops to disk
         debug_out_dir : folder for debug output
 
@@ -148,7 +227,8 @@ def extract_all_rois(
         py2 = min(H-1, y2 + pad)
 
         crops[name] = roi_final_rgb[py1:py2, px1:px2].copy()
-
+        if remove_lines:
+            crops[name] = remove_grid_lines(crops[name])
 
         if debug and vis is not None:
             col     = PALETTE[idx % len(PALETTE)]
@@ -169,6 +249,59 @@ def extract_all_rois(
         print(f"[extractor] {len(crops)} crops → {debug_out_dir}/")
 
     return crops
+def remove_grid_lines(crop_rgb, line_thickness=15, debug=False):
+    """
+    Remove printed horizontal/vertical grid lines from a cropped image.
+    
+    Args:
+        crop_rgb (np.ndarray): RGB image (height x width x 3)
+        line_thickness (int): approximate thickness of grid lines in pixels
+        debug (bool): if True, show intermediate steps
+        
+    Returns:
+        cleaned RGB image (same size)
+    """
+    gray = cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2GRAY)
+    
+    # 1. Binarize: text and lines become white, background black
+    # Adaptive threshold works well for non-uniform illumination
+    binary = cv2.adaptiveThreshold(gray, 255,
+                                   cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY_INV,
+                                   51, 10)
+    
+    # 2. Morphological opening to extract horizontal lines
+    h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT,
+                                         (max(gray.shape[1] // 3, 3*line_thickness), 1))
+    horiz_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, h_kernel)
+    
+    # 3. Extract vertical lines
+    v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT,
+                                         (1, max(gray.shape[0] // 3, 3*line_thickness)))
+    vert_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, v_kernel)
+    
+    # 4. Combine line masks
+    line_mask = cv2.bitwise_or(horiz_lines, vert_lines)
+    
+    # Optional: dilate mask slightly to cover line edges
+    kernel = np.ones((2,2), np.uint8)
+    line_mask = cv2.dilate(line_mask, kernel, iterations=1)
+    
+    # 5. Inpaint
+    inpaint_mask = line_mask.astype(np.uint8)
+    cleaned_gray = cv2.inpaint(gray, inpaint_mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+
+    if debug:
+        cv2.imshow("Binary (lines+text)", binary)
+        cv2.imshow("Horizontal lines", horiz_lines)
+        cv2.imshow("Vertical lines", vert_lines)
+        cv2.imshow("Line mask", line_mask)
+        cv2.imshow("Cleaned gray", cleaned_gray)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    cleaned_rgb = cv2.cvtColor(cleaned_gray, cv2.COLOR_GRAY2RGB)
+    return cleaned_rgb
 
 def save_crops(
         crops:   Dict[str, np.ndarray],
@@ -182,3 +315,47 @@ def save_crops(
     print(f"[extractor] Saved {len(crops)} crops → {out_dir}/")
 
 
+def build_structured_result(crops: Dict[str, np.ndarray]) -> dict:
+    """
+    Organise crops into a structured dict mirroring the form layout.
+
+    Returns:
+    {
+        "header": {
+            "date":    <ndarray>,
+            "surname": <ndarray>,
+            "name":    <ndarray>,
+            "class":   <ndarray>,
+        },
+        "answers": {
+            "q1": <ndarray>, ..., "q32": <ndarray>
+        },
+        "corrections": [
+            {"num": <ndarray>, "answer": <ndarray>},  # corr1
+            ...                                        # corr2–8
+        ]
+    }
+    """
+    result: dict = {
+        "header":      {},
+        "answers":     {},
+        "corrections": [],
+    }
+
+    for field in ("date", "surname", "name", "class"):
+        if field in crops:
+            result["header"][field] = crops[field]
+
+    for i in range(1, 33):
+        key = f"q{i}"
+        if key in crops:
+            result["answers"][key] = crops[key]
+
+    for i in range(1, 9):
+        entry = {}
+        if f"corr{i}_num"    in crops: entry["num"]    = crops[f"corr{i}_num"]
+        if f"corr{i}_answer" in crops: entry["answer"] = crops[f"corr{i}_answer"]
+        if entry:
+            result["corrections"].append(entry)
+
+    return result

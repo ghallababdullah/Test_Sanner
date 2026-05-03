@@ -97,6 +97,14 @@ public class ScanMapper {
             }
         }
 
+        if (scannedBlank.getProcessingStatus() != null) {
+            response.setProcessingStatus(scannedBlank.getProcessingStatus().name());
+        }
+
+        if (scannedBlank.getReviewStatus() != null) {
+            response.setReviewStatus(scannedBlank.getReviewStatus().name());
+        }
+
         return response;
     }
 

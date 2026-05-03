@@ -1,6 +1,6 @@
 package com.Ghallab.dev.Test_Scanner_backend.scan.dto;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.Ghallab.dev.Test_Scanner_backend.result.dto.StudentAnswerResponse;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -33,11 +35,13 @@ public class ScannedBlankDetailedResponse {
 
     private String reviewStatus;
 
-    private JsonNode answers;
+    private Map<String, String> answers;
 
-    private JsonNode errorCorrections;
+    private Map<String, String> errorCorrections;
 
-    private JsonNode finalAnswers;
+    private Map<String, String> finalAnswers;
+
+    private Boolean isErrorCorrectionApplied;
 
     private Boolean isScored;
 
@@ -51,11 +55,19 @@ public class ScannedBlankDetailedResponse {
 
     private String feedback;
 
+    private String reviewNotes;
+
+    private List<StudentAnswerResponse> answerGrades;
+
     private String originalImagePath;
 
     private String processedImagePath;
 
     private String thumbnailPath;
+
+    private String processingStatus;
+
+    private String processingError;
 
     private LocalDateTime scannedAt;
 

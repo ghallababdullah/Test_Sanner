@@ -8,7 +8,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -17,7 +16,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateAnswerKeyRequest {
 
-    @NotNull(message = "Test ID is required")
     private UUID testId;
 
     @NotNull(message = "Question number is required")

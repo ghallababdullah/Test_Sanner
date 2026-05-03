@@ -29,291 +29,6 @@ DEBUG          = True         # set False for production
 ROI_JSON       = "rois.json"  # created by roi_mapper.py
 OUTPUT_ROOT    = "output"     # where to save results
 
-
-def _odd(value: int) -> int:
-    value = max(3, int(value))
-    return value if value % 2 == 1 else value + 1
-
-
-def normalize_roi_gray(roi):
-    """
-    Normalize local illumination so thresholding depends on the current ROI
-    instead of fixed global photo conditions.
-    """
-    gray = cv2.cvtColor(roi, cv2.COLOR_RGB2GRAY)
-    h, w = gray.shape[:2]
-    bg_size = _odd(max(21, min(h, w) // 2))
-    background = cv2.GaussianBlur(gray, (bg_size, bg_size), 0)
-    normalized = cv2.divide(gray, background, scale=255)
-    clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
-    return clahe.apply(normalized)
-
-
-def threshold_to_binary(gray, method="otsu"):
-    """
-    Return a black-on-white binary image.
-    """
-    if method == "adaptive":
-        block_size = _odd(max(21, min(gray.shape[:2]) // 3))
-        binary_inv = cv2.adaptiveThreshold(
-            gray,
-            255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY_INV,
-            block_size,
-            10,
-        )
-    else:
-        blur = cv2.GaussianBlur(gray, (3, 3), 0)
-        _, binary_inv = cv2.threshold(
-            blur,
-            0,
-            255,
-            cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU,
-        )
-    return cv2.bitwise_not(binary_inv)
-
-
-def _find_lattice_phases(values, period, tolerance=2):
-    if len(values) == 0 or period <= 0:
-        return []
-    bins = np.zeros(period, dtype=np.float32)
-    for v in values:
-        bins[int(round(v)) % period] += 1.0
-    if bins.max() <= 0:
-        return []
-
-    peak_threshold = bins.max() * 0.5
-    phases = []
-    for idx, score in enumerate(bins):
-        if score < peak_threshold:
-            continue
-        left = bins[(idx - 1) % period]
-        right = bins[(idx + 1) % period]
-        if score >= left and score >= right:
-            phases.append(idx)
-
-    merged = []
-    for phase in phases:
-        if any(min((phase - old) % period, (old - phase) % period) <= tolerance for old in merged):
-            continue
-        merged.append(phase)
-    return merged
-
-
-def _measure_lattice_strength(values, period, phases, tolerance=2):
-    if len(values) == 0 or period <= 0 or not phases:
-        return 0.0
-    hits = 0
-    for v in values:
-        residue = int(round(v)) % period
-        if any(min((residue - p) % period, (p - residue) % period) <= tolerance for p in phases):
-            hits += 1
-    return hits / max(1, len(values))
-
-
-def analyze_dot_grid_profile(binary_white):
-    """
-    Measure whether this ROI contains a repeated dotted template structure.
-    """
-    ink = (binary_white == 0).astype(np.uint8)
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(ink)
-    h, w = binary_white.shape[:2]
-
-    dot_components = []
-    for idx in range(1, num_labels):
-        x = int(stats[idx, cv2.CC_STAT_LEFT])
-        y = int(stats[idx, cv2.CC_STAT_TOP])
-        cw = int(stats[idx, cv2.CC_STAT_WIDTH])
-        ch = int(stats[idx, cv2.CC_STAT_HEIGHT])
-        area = int(stats[idx, cv2.CC_STAT_AREA])
-        if area < 2 or area > 80:
-            continue
-        if cw > max(8, int(w * 0.08)) or ch > max(8, int(h * 0.25)):
-            continue
-        cx, cy = centroids[idx]
-        dot_components.append((idx, x, y, cw, ch, area, float(cx), float(cy)))
-
-    x_vals = np.array([c[6] for c in dot_components], dtype=np.float32)
-    y_vals = np.array([c[7] for c in dot_components], dtype=np.float32)
-
-    def dominant_period(vals, limit):
-        if len(vals) < 6:
-            return None
-        vals = np.sort(vals)
-        diffs = np.diff(vals)
-        diffs = diffs[(diffs >= 4) & (diffs <= limit)]
-        if len(diffs) == 0:
-            return None
-        return int(np.median(diffs))
-
-    x_period = dominant_period(x_vals, max(16, w // 3))
-    y_period = dominant_period(y_vals, max(12, h // 2))
-    x_phases = _find_lattice_phases(x_vals, x_period) if x_period else []
-    y_phases = _find_lattice_phases(y_vals, y_period) if y_period else []
-    x_strength = _measure_lattice_strength(x_vals, x_period, x_phases) if x_period else 0.0
-    y_strength = _measure_lattice_strength(y_vals, y_period, y_phases) if y_period else 0.0
-
-    ink_ratio = float(np.mean(ink))
-    dot_density = len(dot_components) / max(1.0, (h * w) / 1000.0)
-    family_score = 0.5 * x_strength + 0.35 * y_strength + 0.15 * min(1.0, dot_density / 2.0)
-
-    return {
-        "family_score": float(family_score),
-        "ink_ratio": ink_ratio,
-        "x_period": x_period,
-        "y_period": y_period,
-        "x_phases": x_phases,
-        "y_phases": y_phases,
-        "dot_components": dot_components,
-        "x_strength": float(x_strength),
-        "y_strength": float(y_strength),
-    }
-
-
-def remove_dotted_grid_from_binary(binary_white):
-    """
-    Remove repeated printed dots while preserving larger handwriting strokes.
-    """
-    cleaned = binary_white.copy()
-    profile = analyze_dot_grid_profile(binary_white)
-    family_score = profile["family_score"]
-    if family_score < 0.30:
-        return cleaned
-
-    ink = (cleaned == 0).astype(np.uint8)
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(ink)
-    aggressive = family_score >= 0.48
-
-    x_period = profile["x_period"]
-    y_period = profile["y_period"]
-    x_phases = profile["x_phases"]
-    y_phases = profile["y_phases"]
-
-    for idx in range(1, num_labels):
-        x = int(stats[idx, cv2.CC_STAT_LEFT])
-        y = int(stats[idx, cv2.CC_STAT_TOP])
-        w = int(stats[idx, cv2.CC_STAT_WIDTH])
-        h = int(stats[idx, cv2.CC_STAT_HEIGHT])
-        area = int(stats[idx, cv2.CC_STAT_AREA])
-        cx, cy = centroids[idx]
-
-        if area > (70 if aggressive else 45):
-            continue
-        if w > (9 if aggressive else 7) or h > (10 if aggressive else 8):
-            continue
-
-        x_match = False
-        y_match = False
-        if x_period and x_phases:
-            residue = int(round(cx)) % x_period
-            x_match = any(min((residue - p) % x_period, (p - residue) % x_period) <= 2 for p in x_phases)
-        if y_period and y_phases:
-            residue = int(round(cy)) % y_period
-            y_match = any(min((residue - p) % y_period, (p - residue) % y_period) <= 2 for p in y_phases)
-
-        if x_match or (aggressive and x_match and y_match):
-            cleaned[labels == idx] = 255
-            continue
-
-        if aggressive and y_match and area <= 24:
-            cleaned[labels == idx] = 255
-
-    return cleaned
-
-
-def prepare_binary_for_ocr(binary_white):
-    """
-    Light cleanup to keep strokes readable for OCR.
-    """
-    ink = cv2.bitwise_not(binary_white)
-    ink = cv2.morphologyEx(
-        ink,
-        cv2.MORPH_CLOSE,
-        cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2)),
-    )
-    return cv2.bitwise_not(ink)
-
-
-def analyze_binary_content(bin_img, roi_name=""):
-    """
-    Decide whether an ROI is effectively empty.
-    """
-    ink = (bin_img == 0).astype(np.uint8)
-    ink_ratio = float(np.mean(ink))
-    num_labels, _labels, stats, _ = cv2.connectedComponentsWithStats(ink)
-
-    meaningful = []
-    for idx in range(1, num_labels):
-        x = int(stats[idx, cv2.CC_STAT_LEFT])
-        y = int(stats[idx, cv2.CC_STAT_TOP])
-        w = int(stats[idx, cv2.CC_STAT_WIDTH])
-        h = int(stats[idx, cv2.CC_STAT_HEIGHT])
-        area = int(stats[idx, cv2.CC_STAT_AREA])
-        if area < 4:
-            continue
-        meaningful.append((x, y, w, h, area))
-
-    if not meaningful:
-        return {
-            "roi_name": roi_name,
-            "is_empty": True,
-            "ink_ratio": ink_ratio,
-            "num_components": 0,
-            "meaningful_components": 0,
-            "total_area": 0,
-            "max_area": 0,
-        }
-
-    large_components = [c for c in meaningful if c[4] >= 24 and c[3] >= 8]
-    total_area = sum(c[4] for c in meaningful)
-    max_area = max(c[4] for c in meaningful)
-
-    if roi_name.endswith("_num"):
-        is_empty = (
-            ink_ratio < 0.0035
-            and len(large_components) == 0
-            and total_area < 90
-            and max_area < 40
-        )
-    elif roi_name.startswith("q"):
-        is_empty = (
-            ink_ratio < 0.0045
-            and len(large_components) <= 1
-            and total_area < 180
-            and max_area < 80
-        )
-    else:
-        is_empty = (
-            ink_ratio < 0.006
-            or (
-                len(large_components) == 0
-                and total_area < 140
-                and max_area < 45
-            )
-        )
-
-    return {
-        "roi_name": roi_name,
-        "is_empty": is_empty,
-        "ink_ratio": ink_ratio,
-        "num_components": len(meaningful),
-        "meaningful_components": len(large_components),
-        "total_area": total_area,
-        "max_area": max_area,
-    }
-
-
-def build_adaptive_roi_variants(roi_name, source_roi, detect_roi):
-    """
-    Build the OCR image variants for this ROI.
-    We currently keep only the best-performing `norm_otsu` output.
-    """
-    gray = normalize_roi_gray(source_roi)
-    norm_otsu = threshold_to_binary(gray, method="otsu")
-    norm_otsu = remove_dotted_grid_from_binary(norm_otsu)
-    return {"norm_otsu": prepare_binary_for_ocr(norm_otsu)}
-
 def rebuild_text_line(chars, spacing=10, pad=5):
     """
     Combine detected character crops into one clean line image.
@@ -386,37 +101,43 @@ def extract_char_from_roi(roi, box, pad=9):
 
 def process_one(image_path: str, definitions: dict) -> dict | None:
     """
-    Process one image with the adaptive ROI cleanup pipeline.
-    Saves one OCR-ready `*_norm_otsu.png` file plus emptiness metadata per ROI.
+    Process a single image through the full pipeline.
+    Returns dict of crops, or None on failure.
     """
-    print(f"\n{'-'*55}")
+    print(f"\n{'─'*55}")
     print(f"Processing: {image_path}")
 
     try:
+        # ── Step 1: Scan & align ─────────────────────────────
         roi_final = scan_image(image_path, debug=DEBUG)
         roi_final_original = roi_final.copy()
-
+        # Enhance contrast
         lab = cv2.cvtColor(roi_final, cv2.COLOR_RGB2LAB)
         l, a, b = cv2.split(lab)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
         l = clahe.apply(l)
         lab = cv2.merge((l, a, b))
         roi_final = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
         roi_final = adjust_gamma(roi_final, gamma=0.8)
         roi_final = unsharp_mask(roi_final, strength=1.2)
 
-        base_name = os.path.splitext(os.path.basename(image_path))[0]
-        out_dir = os.path.join(OUTPUT_ROOT, base_name)
+        # ── Step 2: Save aligned image ───────────────────────
+        base_name  = os.path.splitext(os.path.basename(image_path))[0]
+        out_dir    = os.path.join(OUTPUT_ROOT, base_name)
         os.makedirs(out_dir, exist_ok=True)
 
         aligned_path = os.path.join(out_dir, "aligned.png")
-        cv2.imwrite(aligned_path, cv2.cvtColor(roi_final, cv2.COLOR_RGB2BGR))
-        print(f"  Aligned image -> {aligned_path}")
+        cv2.imwrite(aligned_path,
+                    cv2.cvtColor(roi_final, cv2.COLOR_RGB2BGR))
+        print(f"  Aligned image → {aligned_path}")
 
+        # ── Step 3: Extract ROIs ─────────────────────────────
         detect_crops = extract_all_rois(
             roi_final,
             definitions=definitions,
             pad=2,
+            # Avoid destructive line removal at extraction time (it can erase ink).
+            # We'll remove grid lines later in preprocess_roi() in a safer way.
             remove_lines=False,
             debug=DEBUG,
             debug_out_dir=os.path.join(out_dir, "detect_crops"),
@@ -430,58 +151,61 @@ def process_one(image_path: str, definitions: dict) -> dict | None:
         )
         print(f"  Extracted {len(detect_crops)} ROIs")
 
+        # ── Step 4: Save crops ───────────────────────────────
         save_crops(output_crops, os.path.join(out_dir, "crops"))
         save_crops(detect_crops, os.path.join(out_dir, "detect_crops"))
 
         counts_by_roi = {}
         for name, roi in detect_crops.items():
+            if name in ["date", "class"] or "num" in name:
+                continue
             boxes = detect_chars_connected_components(roi, return_boxes=True)
             counts_by_roi[name] = len(boxes)
+            if not boxes:
+                continue
 
             source_roi = output_crops.get(name, roi)
-            variants = build_adaptive_roi_variants(name, source_roi, roi)
-            if not variants:
+            chars = []
+            for box in boxes:
+                char = extract_char_from_roi(source_roi, box)
+                if char.size == 0:
+                    continue
+                prepared = prepare_char_for_output(char)
+                if prepared is None:
+                    continue
+                chars.append(prepared)
+
+            if not chars:
                 continue
 
-            norm_otsu_img = variants.get("norm_otsu")
-            if norm_otsu_img is None:
+            clean_line = rebuild_text_line(chars)
+
+            if clean_line is None:
                 continue
 
-            out_path = os.path.join(out_dir, f"{name}_norm_otsu.png")
-            cv2.imwrite(out_path, norm_otsu_img)
+            out_path = os.path.join(out_dir, f"{name}_clean.png")
 
-            content = analyze_binary_content(norm_otsu_img, roi_name=name)
-            meta_path = os.path.join(out_dir, f"{name}_norm_otsu.meta.json")
-            with open(meta_path, "w", encoding="utf-8") as meta_file:
-                json.dump(content, meta_file, ensure_ascii=False, indent=2)
+            cv2.imwrite(out_path, clean_line)
+                # ── Step 5: Gradient analysis for one selected ROI ─────────────────
+        roi_to_analyze = "q9"   # можно заменить на "q1", "q7", "name" и т.д.
 
-            if DEBUG:
-                print(
-                    f"  [variant] {name}: saved=norm_otsu empty={content['is_empty']} "
-                    f"ink={content['ink_ratio']:.4f}"
-                )
-
-        roi_to_analyze = "q9"
         gradient_dir = os.path.join(out_dir, "gradient_analysis")
         gradient_result = analyze_one_roi_gradient(
             roi_name=roi_to_analyze,
             detect_crops=detect_crops,
             output_crops=output_crops,
-            out_dir=gradient_dir,
+            out_dir=gradient_dir
         )
 
         if gradient_result is not None:
-            with open(
-                os.path.join(gradient_dir, f"{roi_to_analyze}_gradient_stats.json"),
-                "w",
-                encoding="utf-8",
-            ) as f:
+            import json
+            with open(os.path.join(gradient_dir, f"{roi_to_analyze}_gradient_stats.json"), "w", encoding="utf-8") as f:
                 json.dump(gradient_result, f, ensure_ascii=False, indent=2)
 
         return detect_crops, counts_by_roi
 
     except RuntimeError as e:
-        print(f"  FAILED: {e}")
+        print(f"  ✗ FAILED: {e}")
         return None
 def preprocess_roi(roi):
     gray = cv2.cvtColor(roi, cv2.COLOR_RGB2GRAY)
@@ -870,7 +594,7 @@ def analyze_one_roi_gradient(
     save_gray_image(os.path.join(out_dir, f"{roi_name}_02_after_binary.png"), th_after)
 
     # Stage 3: clean ROI (if exists)
-    clean_path = os.path.join(os.path.dirname(out_dir), f"{roi_name}_norm_otsu.png")
+    clean_path = os.path.join(os.path.dirname(out_dir), f"{roi_name}_clean.png")
     stats_clean = None
 
     if os.path.exists(clean_path):

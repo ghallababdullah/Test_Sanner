@@ -4,10 +4,16 @@ import com.Ghallab.dev.Test_Scanner_backend.auth.domain.entity.User;
 import com.Ghallab.dev.Test_Scanner_backend.auth.domain.repository.UserRepository;
 import com.Ghallab.dev.Test_Scanner_backend.common.Response.Response;
 import com.Ghallab.dev.Test_Scanner_backend.common.exceptions.NotFoundException;
+import com.Ghallab.dev.Test_Scanner_backend.result.domain.entity.StudentAnswer;
+import com.Ghallab.dev.Test_Scanner_backend.result.domain.entity.TestResult;
+import com.Ghallab.dev.Test_Scanner_backend.result.domain.repository.StudentAnswerRepository;
+import com.Ghallab.dev.Test_Scanner_backend.result.domain.repository.TestResultRepository;
+import com.Ghallab.dev.Test_Scanner_backend.result.domain.service.ScannedBlankResultService;
 import com.Ghallab.dev.Test_Scanner_backend.scan.domain.entity.ScannedBlank;
 import com.Ghallab.dev.Test_Scanner_backend.scan.domain.entity.ScanSession;
 import com.Ghallab.dev.Test_Scanner_backend.scan.domain.repository.ScannedBlankRepository;
 import com.Ghallab.dev.Test_Scanner_backend.scan.domain.repository.ScanSessionRepository;
+import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScannedBlankDetailedResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScannedBlankResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScanSessionResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.StartScanSessionRequest;
@@ -15,6 +21,7 @@ import com.Ghallab.dev.Test_Scanner_backend.scan.dto.UploadScannedBlankRequest;
 import com.Ghallab.dev.Test_Scanner_backend.scan.mapper.ScanMapper;
 import com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.Test;
 import com.Ghallab.dev.Test_Scanner_backend.test.domain.repository.TestRepository;
+import com.Ghallab.dev.Test_Scanner_backend.result.dto.StudentAnswerResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,9 +29,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -44,6 +56,11 @@ public class ScanServiceImpl implements ScanService {
     private final TestRepository testRepository;
     private final UserRepository userRepository;
     private final ScanMapper scanMapper;
+    private final ScanFileStorageService scanFileStorageService;
+    private final ScanJobPublisher scanJobPublisher;
+    private final ScannedBlankResultService scannedBlankResultService;
+    private final TestResultRepository testResultRepository;
+    private final StudentAnswerRepository studentAnswerRepository;
     private final ObjectMapper objectMapper; // For JSON serialization
 
     /**
@@ -95,12 +112,19 @@ public class ScanServiceImpl implements ScanService {
     }
 
     /**
-     * Submit a scanned blank with extracted OCR data
+     * Receive an uploaded scanned blank and create a pending OCR record.
      */
     @Override
     public Response<ScannedBlankResponse> submitScannedBlank(UploadScannedBlankRequest request) {
         try {
-            log.info("Submitting scanned blank for test: {}, student: {}", request.getTestId(), request.getStudentName());
+            MultipartFile image = request.getImage();
+            if (image == null || image.isEmpty()) {
+                return Response.error("Scanned image is required", 400);
+            }
+
+            log.info("Submitting scanned blank image for test: {}, file: {}",
+                    request.getTestId(),
+                    image.getOriginalFilename());
 
             // Get current user (teacher)
             User currentUser = getCurrentUser();
@@ -113,30 +137,21 @@ public class ScanServiceImpl implements ScanService {
             Test test = testRepository.findById(request.getTestId())
                     .orElseThrow(() -> new NotFoundException("Test not found"));
 
-            // Serialize answers Object to JSON string
-            String answersJson = null;
-            if (request.getAnswers() != null) {
-                answersJson = objectMapper.writeValueAsString(request.getAnswers());
-            }
+            String originalImagePath = scanFileStorageService.store(session.getId(), image);
 
-            // Serialize errorCorrections Object to JSON string
-            String errorCorrectionsJson = null;
-            if (request.getErrorCorrections() != null) {
-                errorCorrectionsJson = objectMapper.writeValueAsString(request.getErrorCorrections());
-            }
-
-            // Create scanned blank
+            // Create scanned blank in pending OCR state.
             ScannedBlank blank = ScannedBlank.builder()
                     .scanSession(session)
                     .test(test)
                     .scannedBy(currentUser)
-                    .studentName(request.getStudentName())
-                    .studentClass(request.getStudentClass())
                     .testDate(request.getTestDate())
-                    .answers(answersJson)
-                    .errorCorrections(errorCorrectionsJson)
-                    .isErrorCorrectionApplied(request.getIsErrorCorrectionApplied() != null ? request.getIsErrorCorrectionApplied() : false)
-                    .overallConfidence(request.getOverallConfidence())
+                    .originalImagePath(originalImagePath)
+                    .answers(null)
+                    .errorCorrections(null)
+                    .isErrorCorrectionApplied(false)
+                    .processingStatus(ScannedBlank.ProcessingStatus.PENDING_OCR)
+                    .processingError(null)
+                    .overallConfidence(null)
                     .needsReview(false)
                     .reviewStatus(ScannedBlank.ReviewStatus.PENDING)
                     .scannedAt(LocalDateTime.now())
@@ -144,17 +159,33 @@ public class ScanServiceImpl implements ScanService {
 
             ScannedBlank savedBlank = scannedBlankRepository.save(blank);
 
+            try {
+                scanJobPublisher.publishScanRequested(savedBlank);
+                savedBlank.setProcessingStatus(ScannedBlank.ProcessingStatus.QUEUED);
+                savedBlank.setProcessingError(null);
+                savedBlank = scannedBlankRepository.save(savedBlank);
+            } catch (Exception publishException) {
+                log.error("Failed to publish OCR job for blank: {}", savedBlank.getId(), publishException);
+                savedBlank.setProcessingStatus(ScannedBlank.ProcessingStatus.OCR_FAILED);
+                savedBlank.setProcessingError("Failed to publish OCR job: " + publishException.getMessage());
+                savedBlank = scannedBlankRepository.save(savedBlank);
+                return Response.error("Scanned blank saved, but failed to queue OCR job", 500);
+            }
+
             // Update session total blanks count
             session.setTotalBlanks(session.getTotalBlanks() + 1);
             scanSessionRepository.save(session);
 
             log.info("Scanned blank saved: {}", savedBlank.getId());
 
-            return Response.success(scanMapper.toScannedBlankResponse(savedBlank), "Scanned blank submitted successfully");
+            return Response.success(scanMapper.toScannedBlankResponse(savedBlank), "Scanned blank uploaded successfully");
 
         } catch (NotFoundException e) {
             log.error("Not found error: {}", e.getMessage());
             return Response.error(e.getMessage(), 404);
+        } catch (IOException e) {
+            log.error("Error storing scanned image", e);
+            return Response.error("Failed to store scanned image: " + e.getMessage(), 500);
         } catch (Exception e) {
             log.error("Error submitting scanned blank", e);
             return Response.error("Failed to submit scanned blank: " + e.getMessage(), 500);
@@ -287,17 +318,37 @@ public class ScanServiceImpl implements ScanService {
                 return Response.error("No error corrections to apply", 400);
             }
 
-            // Serialize errorCorrections Object to JSON string
-            String errorCorrectionsJson = objectMapper.writeValueAsString(errorCorrections);
+            @SuppressWarnings("unchecked")
+            Map<String, String> rawCorrections = errorCorrections instanceof Map<?, ?> map
+                    ? map.entrySet().stream().collect(Collectors.toMap(
+                            entry -> String.valueOf(entry.getKey()),
+                            entry -> entry.getValue() == null ? null : String.valueOf(entry.getValue()),
+                            (left, right) -> right,
+                            LinkedHashMap::new
+                    ))
+                    : new LinkedHashMap<>();
+
+            Map<String, String> filteredCorrections = scannedBlankResultService.filterAnswersForTest(
+                    blank.getTest().getId(),
+                    rawCorrections
+            );
+            if (filteredCorrections.isEmpty()) {
+                return Response.error("No valid error corrections matched this test's answer keys", 400);
+            }
+
+            // Serialize filtered errorCorrections Object to JSON string
+            String errorCorrectionsJson = objectMapper.writeValueAsString(filteredCorrections);
 
             // Set the corrections on the blank
             blank.setErrorCorrections(errorCorrectionsJson);
             blank.setIsErrorCorrectionApplied(true);
+            blank.setNeedsReview(false);
             blank.setReviewStatus(ScannedBlank.ReviewStatus.CORRECTED);
             blank.setReviewedAt(LocalDateTime.now());
             blank.setReviewedBy(getCurrentUser());
 
             ScannedBlank updated = scannedBlankRepository.save(blank);
+            scannedBlankResultService.evaluateAndPersist(updated);
 
             return Response.success(scanMapper.toScannedBlankResponse(updated), "Error corrections applied successfully");
 
@@ -307,6 +358,88 @@ public class ScanServiceImpl implements ScanService {
         } catch (Exception e) {
             log.error("Error applying corrections", e);
             return Response.error("Failed to apply corrections: " + e.getMessage(), 500);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Response<ScannedBlankDetailedResponse> getScannedBlankDetails(UUID blankId) {
+        try {
+            log.info("Fetching detailed scanned blank view: {}", blankId);
+
+            ScannedBlank blank = scannedBlankRepository.findById(blankId)
+                    .orElseThrow(() -> new NotFoundException("Scanned blank not found"));
+
+            TestResult testResult = testResultRepository.findByScannedBlankId(blankId).orElse(null);
+            List<StudentAnswer> answerGrades = studentAnswerRepository.findByScannedBlankId(blankId);
+
+            ScannedBlankDetailedResponse response = new ScannedBlankDetailedResponse();
+            response.setId(blank.getId());
+            response.setScanSessionId(blank.getScanSession() != null ? blank.getScanSession().getId() : null);
+            response.setTestId(blank.getTest() != null ? blank.getTest().getId() : null);
+            response.setStudentName(blank.getStudentName());
+            response.setStudentClass(blank.getStudentClass());
+            response.setTestDate(blank.getTestDate());
+            response.setOverallConfidence(blank.getOverallConfidence());
+            response.setNeedsReview(blank.getNeedsReview());
+            response.setReviewStatus(blank.getReviewStatus() != null ? blank.getReviewStatus().name() : null);
+            response.setAnswers(scannedBlankResultService.readStringMap(blank.getAnswers()));
+            response.setErrorCorrections(scannedBlankResultService.readStringMap(blank.getErrorCorrections()));
+            response.setFinalAnswers(scannedBlankResultService.buildFinalAnswers(blank));
+            response.setIsErrorCorrectionApplied(blank.getIsErrorCorrectionApplied());
+            response.setIsScored(testResult != null);
+            response.setRawScore(testResult != null ? testResult.getTotalScore() : null);
+            response.setMaxScore(testResult != null ? testResult.getMaxScore() : null);
+            response.setPercentage(testResult != null ? testResult.getPercentage() : null);
+            response.setGrade(testResult != null ? testResult.getGrade() : null);
+            response.setFeedback(buildFeedback(testResult));
+            response.setReviewNotes(blank.getReviewNotes());
+            response.setAnswerGrades(answerGrades.stream()
+                    .map(this::toStudentAnswerResponse)
+                    .collect(Collectors.toList()));
+            response.setOriginalImagePath(blank.getOriginalImagePath());
+            response.setProcessedImagePath(blank.getProcessedImagePath());
+            response.setThumbnailPath(blank.getThumbnailPath());
+            response.setProcessingStatus(blank.getProcessingStatus() != null ? blank.getProcessingStatus().name() : null);
+            response.setProcessingError(blank.getProcessingError());
+            response.setScannedAt(blank.getScannedAt());
+            response.setProcessedAt(blank.getProcessedAt());
+            response.setScoredAt(testResult != null ? testResult.getCreatedAt() : null);
+            response.setReviewedAt(blank.getReviewedAt());
+            response.setCreatedAt(blank.getCreatedAt());
+
+            return Response.success(response, "Scanned blank details retrieved successfully");
+        } catch (NotFoundException e) {
+            log.error("Not found error: {}", e.getMessage());
+            return Response.error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Error fetching scanned blank details", e);
+            return Response.error("Failed to fetch scanned blank details: " + e.getMessage(), 500);
+        }
+    }
+
+    @Override
+    public Response<ScannedBlankResponse> retryOcr(UUID blankId) {
+        try {
+            log.info("Retrying OCR for blank: {}", blankId);
+
+            ScannedBlank blank = scannedBlankRepository.findById(blankId)
+                    .orElseThrow(() -> new NotFoundException("Scanned blank not found"));
+
+            scanJobPublisher.publishScanRequested(blank);
+            blank.setProcessingStatus(ScannedBlank.ProcessingStatus.QUEUED);
+            blank.setProcessingError(null);
+            blank.setProcessedAt(null);
+
+            ScannedBlank updated = scannedBlankRepository.save(blank);
+            return Response.success(scanMapper.toScannedBlankResponse(updated), "OCR job re-queued successfully");
+
+        } catch (NotFoundException e) {
+            log.error("Not found error: {}", e.getMessage());
+            return Response.error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Error retrying OCR for blank: {}", blankId, e);
+            return Response.error("Failed to retry OCR: " + e.getMessage(), 500);
         }
     }
 
@@ -321,6 +454,32 @@ public class ScanServiceImpl implements ScanService {
         String userEmail = authentication.getName();
         return userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new NotFoundException("Current user not found"));
+    }
+
+    private String buildFeedback(TestResult testResult) {
+        if (testResult == null) {
+            return null;
+        }
+        BigDecimal total = testResult.getTotalScore();
+        BigDecimal max = testResult.getMaxScore();
+        BigDecimal percentage = testResult.getPercentage();
+        String grade = testResult.getGrade();
+        return "Score: " + total + "/" + max + " (" + percentage + "%) - Grade: " + grade;
+    }
+
+    private StudentAnswerResponse toStudentAnswerResponse(StudentAnswer answer) {
+        StudentAnswerResponse response = new StudentAnswerResponse();
+        response.setId(answer.getId());
+        response.setScannedBlankId(answer.getScannedBlank() != null ? answer.getScannedBlank().getId() : null);
+        response.setQuestionNumber(answer.getQuestionNumber());
+        response.setCorrectAnswer(answer.getCorrectAnswer());
+        response.setStudentAnswer(answer.getStudentAnswer());
+        response.setFinalAnswer(answer.getFinalAnswer());
+        response.setScore(answer.getScore());
+        response.setMaxPoints(answer.getMaxPoints());
+        response.setMatchType(answer.getMatchType());
+        response.setCreatedAt(answer.getCreatedAt());
+        return response;
     }
 }
 

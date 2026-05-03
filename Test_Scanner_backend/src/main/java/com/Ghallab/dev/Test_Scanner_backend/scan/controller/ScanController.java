@@ -2,6 +2,7 @@ package com.Ghallab.dev.Test_Scanner_backend.scan.controller;
 
 import com.Ghallab.dev.Test_Scanner_backend.common.Response.Response;
 import com.Ghallab.dev.Test_Scanner_backend.scan.domain.service.ScanService;
+import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScannedBlankDetailedResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScannedBlankResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScanSessionResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.StartScanSessionRequest;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import java.util.List;
@@ -19,7 +21,7 @@ import java.util.UUID;
 /**
  * ScanController
  * API endpoints for scanning operations
- * Handles raw OCR data submission and retrieval
+ * Handles scanned blank intake and retrieval
  * Does NOT handle grading - that's GradingController
  */
 @RestController
@@ -71,10 +73,13 @@ public class ScanController {
      *   "isErrorCorrectionApplied": false
      * }
      */
-    @PostMapping("/submit-blank")
+    @PostMapping(value = "/submit-blank", consumes = {"multipart/form-data"})
     public ResponseEntity<Response<ScannedBlankResponse>> submitScannedBlank(
-            @Valid @RequestBody UploadScannedBlankRequest request) {
-        log.info("Submitting scanned blank for test: {}", request.getTestId());
+            @Valid @ModelAttribute UploadScannedBlankRequest request) {
+        MultipartFile image = request.getImage();
+        log.info("Uploading scanned blank image for test: {}, file: {}",
+                request.getTestId(),
+                image != null ? image.getOriginalFilename() : "<missing>");
         Response<ScannedBlankResponse> response = scanService.submitScannedBlank(request);
         return ResponseEntity.ok(response);
     }
@@ -116,6 +121,18 @@ public class ScanController {
     }
 
     /**
+     * Get a detailed scanned blank view including final answers and scoring details.
+     * GET /api/scan/blank/{blankId}/details
+     */
+    @GetMapping("/blank/{blankId}/details")
+    public ResponseEntity<Response<ScannedBlankDetailedResponse>> getScannedBlankDetails(
+            @PathVariable UUID blankId) {
+        log.info("Fetching scanned blank details: {}", blankId);
+        Response<ScannedBlankDetailedResponse> response = scanService.getScannedBlankDetails(blankId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Mark scanned blank as needing review
      * PUT /api/scan/blank/{blankId}/mark-review
      *
@@ -153,6 +170,14 @@ public class ScanController {
         Object errorCorrections = request != null ? request.get("errorCorrections") : null;
 
         Response<ScannedBlankResponse> response = scanService.applyErrorCorrections(blankId, errorCorrections);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/blank/{blankId}/retry-ocr")
+    public ResponseEntity<Response<ScannedBlankResponse>> retryOcr(
+            @PathVariable UUID blankId) {
+        log.info("Retrying OCR for blank: {}", blankId);
+        Response<ScannedBlankResponse> response = scanService.retryOcr(blankId);
         return ResponseEntity.ok(response);
     }
 }

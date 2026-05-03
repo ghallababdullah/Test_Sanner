@@ -3,7 +3,6 @@ package com.Ghallab.dev.Test_Scanner_backend.shared.event;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -15,11 +14,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public abstract class DomainEvent {
     private UUID eventId;
-    private LocalDateTime occurredAt;
+    private String occurredAt;
 
     protected DomainEvent(UUID eventId) {
         this.eventId = eventId;
-        this.occurredAt = LocalDateTime.now();
+        this.occurredAt = java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).toString();
     }
 }
 

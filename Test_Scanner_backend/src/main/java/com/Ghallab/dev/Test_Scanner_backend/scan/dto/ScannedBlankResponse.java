@@ -26,11 +26,19 @@ public class ScannedBlankResponse {
 
     private String studentName;
 
-    private String studentLastName;
-
     private String studentClass;
 
     private LocalDate testDate;
+
+    private String originalImagePath;
+
+    private String processedImagePath;
+
+    private String thumbnailPath;
+
+    private String processingStatus;
+
+    private String processingError;
 
     // OCR Quality
     private BigDecimal overallConfidence;
@@ -48,6 +56,8 @@ public class ScannedBlankResponse {
 
     // Timestamps
     private LocalDateTime scannedAt;
+
+    private LocalDateTime processedAt;
 
     private LocalDateTime reviewedAt;
 }

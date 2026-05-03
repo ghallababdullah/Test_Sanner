@@ -5,11 +5,15 @@ server:
 spring:
   application:
     name: Test_Scanner_backend
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/scanner_db
-    username: postgres
-    password: "051020"
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/scanner_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:051020}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -31,6 +35,21 @@ spring:
       string: abdullah4u12345abdullah4u12345abdullah4u12345
     expiration:
       time: 86400000
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:scanner}
+    password: ${RABBIT_PASS:scanner_pass}
+    virtual-host: /
+    listener:
+      simple:
+        acknowledge-mode: manual
+        retry:
+          enabled: true
+          initial-interval: 3s
+          max-attempts: 3
+          multiplier: 2.0
+
   mail:
     host: smtp.mailtrap.io
     port: 587
@@ -47,4 +66,14 @@ app:
   mail:
     from: no-reply@scannerage.dev
     name: ScannerAGE Notifications
-
+  scan:
+    storage:
+      root-dir: ${SCAN_STORAGE_ROOT:./storage/scans}
+      copy-ocr-artifacts: ${SCAN_COPY_OCR_ARTIFACTS:true}
+      python-output-root: ${PYTHON_OCR_OUTPUT_ROOT:../Python_CV_OCR/output}
+    messaging:
+      exchange: ${SCAN_EXCHANGE:scan.exchange}
+      routing-key: ${SCAN_REQUEST_ROUTING_KEY:scan.ocr.requested}
+      request-queue: ${SCAN_REQUEST_QUEUE:scan.ocr.request.queue}
+      result-routing-key: ${SCAN_RESULT_ROUTING_KEY:scan.ocr.completed}
+      result-queue: ${SCAN_RESULT_QUEUE:scan.ocr.result.queue}

@@ -12,7 +12,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateGradeThresholdRequest {
 
-    @NotNull(message = "Test ID is required")
     private UUID testId;
 
     @NotBlank(message = "Grade name is required")

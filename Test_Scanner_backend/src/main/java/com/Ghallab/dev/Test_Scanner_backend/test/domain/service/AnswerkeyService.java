@@ -11,6 +11,8 @@ import java.util.UUID;
 public interface AnswerkeyService {
     Response<AnswerKeyResponse> createAnswerKey(CreateAnswerKeyRequest request);
 
+    Response<List<AnswerKeyResponse>> createAnswerKeysBulk(UUID testId, List<CreateAnswerKeyRequest> requests);
+
     Response<List<AnswerKeyResponse>> getAnswerKeysByTest(UUID testId);
 
     Response<AnswerKeyResponse> updateAnswerKey(UUID keyId, UpdateAnswerKeyRequest request);

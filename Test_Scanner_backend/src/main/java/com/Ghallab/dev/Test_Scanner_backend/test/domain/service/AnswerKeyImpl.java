@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -57,6 +58,43 @@ public class AnswerKeyImpl implements AnswerkeyService {
                 .message("Answer key created successfully")
                 .statusCode(HttpStatus.CREATED.value())
                 .data(response)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public Response<List<AnswerKeyResponse>> createAnswerKeysBulk(UUID testId, List<CreateAnswerKeyRequest> requests) {
+        log.info("Starting bulk answer key creation for test: {}", testId);
+
+        if (requests == null || requests.isEmpty()) {
+            return Response.<List<AnswerKeyResponse>>builder()
+                    .success(false)
+                    .message("Answer key list cannot be empty")
+                    .statusCode(HttpStatus.BAD_REQUEST.value())
+                    .data(List.of())
+                    .build();
+        }
+
+        Test test = testRepository.findById(testId)
+                .orElseThrow(() -> {
+                    log.error("Test not found with id: {}", testId);
+                    return new NotFoundException("Test not found with id: " + testId);
+                });
+
+        List<AnswerKeyResponse> responses = new ArrayList<>();
+        for (CreateAnswerKeyRequest request : requests) {
+            request.setTestId(testId);
+            AnswerKey answerKey = testMapper.toAnswerKeyEntity(request, test);
+            AnswerKey savedKey = answerKeyRepository.save(answerKey);
+            responses.add(testMapper.toAnswerKeyResponse(savedKey));
+        }
+
+        log.info("Bulk answer key creation completed. Created {} keys for test {}", responses.size(), testId);
+        return Response.<List<AnswerKeyResponse>>builder()
+                .success(true)
+                .message("Answer keys created successfully")
+                .statusCode(HttpStatus.CREATED.value())
+                .data(responses)
                 .build();
     }
 
