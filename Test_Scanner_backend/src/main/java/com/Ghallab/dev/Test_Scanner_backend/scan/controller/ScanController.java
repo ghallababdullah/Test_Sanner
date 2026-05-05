@@ -120,6 +120,14 @@ public class ScanController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/blank/{blankId}")
+    public ResponseEntity<Response<String>> deleteScannedBlank(
+            @PathVariable UUID blankId) {
+        log.info("Deleting scanned blank: {}", blankId);
+        Response<String> response = scanService.deleteScannedBlank(blankId);
+        return ResponseEntity.ok(response);
+    }
+
     /**
      * Get a detailed scanned blank view including final answers and scoring details.
      * GET /api/scan/blank/{blankId}/details

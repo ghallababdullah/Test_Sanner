@@ -18,6 +18,8 @@ public interface ScannedBlankRepository extends JpaRepository<ScannedBlank, UUID
 
     List<ScannedBlank> findByTestId(UUID testId);
 
+    List<ScannedBlank> findByTestIdIn(List<UUID> testIds);
+
     List<ScannedBlank> findByNeedsReviewTrue();
 }
 

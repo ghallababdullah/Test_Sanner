@@ -1,0 +1,9 @@
+{
+  "roi_name": "q30",
+  "is_empty": false,
+  "ink_ratio": 0.03586171310629515,
+  "num_components": 7,
+  "meaningful_components": 7,
+  "total_area": 1109,
+  "max_area": 180
+}

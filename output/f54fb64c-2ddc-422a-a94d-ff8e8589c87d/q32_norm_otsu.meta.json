@@ -1,0 +1,9 @@
+{
+  "roi_name": "q32",
+  "is_empty": false,
+  "ink_ratio": 0.03592359453006295,
+  "num_components": 9,
+  "meaningful_components": 8,
+  "total_area": 990,
+  "max_area": 191
+}

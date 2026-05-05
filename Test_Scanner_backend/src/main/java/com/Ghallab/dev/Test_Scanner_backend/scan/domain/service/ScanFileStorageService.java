@@ -89,6 +89,27 @@ public class ScanFileStorageService {
         return processedImagePath;
     }
 
+    public void deleteBlankArtifacts(String originalImagePath, String processedImagePath, String thumbnailPath) throws IOException {
+        deleteFileIfExists(originalImagePath);
+        deleteFileIfExists(processedImagePath);
+        deleteFileIfExists(thumbnailPath);
+
+        if (originalImagePath == null || originalImagePath.isBlank()) {
+            return;
+        }
+
+        Path originalPath = Path.of(originalImagePath).toAbsolutePath().normalize();
+        Path originalParent = originalPath.getParent();
+        if (originalParent == null) {
+            return;
+        }
+
+        Path artifactDir = originalParent.resolve(stripExtension(originalPath.getFileName().toString())).normalize();
+        if (artifactDir.startsWith(rootDir) && Files.isDirectory(artifactDir)) {
+            deleteDirectoryIfExists(artifactDir);
+        }
+    }
+
     private String extractExtension(String originalFilename) {
         String cleanName = StringUtils.cleanPath(originalFilename == null ? "" : originalFilename);
         int index = cleanName.lastIndexOf('.');
@@ -148,6 +169,16 @@ public class ScanFileStorageService {
                     Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
                 }
             }
+        }
+    }
+
+    private void deleteFileIfExists(String pathValue) throws IOException {
+        if (pathValue == null || pathValue.isBlank()) {
+            return;
+        }
+        Path path = Path.of(pathValue).toAbsolutePath().normalize();
+        if (Files.exists(path) && Files.isRegularFile(path)) {
+            Files.delete(path);
         }
     }
 }

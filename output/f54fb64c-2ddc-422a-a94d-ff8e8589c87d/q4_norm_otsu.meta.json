@@ -1,0 +1,9 @@
+{
+  "roi_name": "q4",
+  "is_empty": false,
+  "ink_ratio": 0.06050448620281022,
+  "num_components": 10,
+  "meaningful_components": 10,
+  "total_area": 1787,
+  "max_area": 255
+}

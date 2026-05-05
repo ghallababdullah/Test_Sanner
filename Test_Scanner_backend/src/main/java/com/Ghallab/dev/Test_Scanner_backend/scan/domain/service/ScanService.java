@@ -44,6 +44,11 @@ public interface ScanService {
     Response<ScannedBlankResponse> getScannedBlankById(UUID blankId);
 
     /**
+     * Delete a scanned blank together with its scoring details and stored artifacts.
+     */
+    Response<String> deleteScannedBlank(UUID blankId);
+
+    /**
      * Get a scanned blank together with final answers and scoring details.
      */
     Response<ScannedBlankDetailedResponse> getScannedBlankDetails(UUID blankId);

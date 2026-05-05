@@ -13,5 +13,11 @@ import java.util.UUID;
 @Repository
 public interface StudentAnswerRepository extends JpaRepository<StudentAnswer, UUID> {
     List<StudentAnswer> findByScannedBlankId(UUID scannedBlankId);
+
+    List<StudentAnswer> findByScannedBlankTestId(UUID testId);
+
+    List<StudentAnswer> findByScannedBlankTestIdIn(List<UUID> testIds);
+
+    void deleteByScannedBlankId(UUID scannedBlankId);
 }
 

@@ -50,6 +50,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional
 public class ScanServiceImpl implements ScanService {
+    private static final int SCAN_SESSION_NAME_MAX_LENGTH = 200;
+    private static final int SCAN_SESSION_DEVICE_FIELD_MAX_LENGTH = 100;
 
     private final ScanSessionRepository scanSessionRepository;
     private final ScannedBlankRepository scannedBlankRepository;
@@ -88,10 +90,10 @@ public class ScanServiceImpl implements ScanService {
             ScanSession session = ScanSession.builder()
                     .test(test)
                     .user(currentUser)
-                    .name(request.getName())
+                    .name(clampText(request.getName(), SCAN_SESSION_NAME_MAX_LENGTH))
                     .description(request.getDescription())
-                    .deviceId(request.getDeviceId())
-                    .deviceModel(request.getDeviceModel())
+                    .deviceId(clampText(request.getDeviceId(), SCAN_SESSION_DEVICE_FIELD_MAX_LENGTH))
+                    .deviceModel(clampText(request.getDeviceModel(), SCAN_SESSION_DEVICE_FIELD_MAX_LENGTH))
                     .totalBlanks(0)
                     .startedAt(LocalDateTime.now())
                     .metadata(metadataJson)
@@ -270,6 +272,47 @@ public class ScanServiceImpl implements ScanService {
         } catch (Exception e) {
             log.error("Error fetching scanned blank", e);
             return Response.error("Failed to fetch scanned blank: " + e.getMessage(), 500);
+        }
+    }
+
+    @Override
+    public Response<String> deleteScannedBlank(UUID blankId) {
+        try {
+            log.info("Deleting scanned blank: {}", blankId);
+
+            ScannedBlank blank = scannedBlankRepository.findById(blankId)
+                    .orElseThrow(() -> new NotFoundException("Scanned blank not found"));
+
+            UUID sessionId = blank.getScanSession() != null ? blank.getScanSession().getId() : null;
+            String originalImagePath = blank.getOriginalImagePath();
+            String processedImagePath = blank.getProcessedImagePath();
+            String thumbnailPath = blank.getThumbnailPath();
+
+            studentAnswerRepository.deleteByScannedBlankId(blankId);
+            testResultRepository.deleteByScannedBlankId(blankId);
+            scannedBlankRepository.delete(blank);
+
+            if (sessionId != null) {
+                scanSessionRepository.findById(sessionId).ifPresent(session -> {
+                    int updatedCount = Math.max(0, (session.getTotalBlanks() == null ? 0 : session.getTotalBlanks()) - 1);
+                    session.setTotalBlanks(updatedCount);
+                    scanSessionRepository.save(session);
+                });
+            }
+
+            try {
+                scanFileStorageService.deleteBlankArtifacts(originalImagePath, processedImagePath, thumbnailPath);
+            } catch (IOException storageException) {
+                log.warn("Failed to delete stored files for blank {}", blankId, storageException);
+            }
+
+            return Response.success("Scanned blank deleted successfully", "Scanned blank deleted successfully");
+        } catch (NotFoundException e) {
+            log.error("Not found error: {}", e.getMessage());
+            return Response.error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Error deleting scanned blank", e);
+            return Response.error("Failed to delete scanned blank: " + e.getMessage(), 500);
         }
     }
 
@@ -480,6 +523,13 @@ public class ScanServiceImpl implements ScanService {
         response.setMatchType(answer.getMatchType());
         response.setCreatedAt(answer.getCreatedAt());
         return response;
+    }
+
+    private String clampText(String value, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() > maxLength ? value.substring(0, maxLength) : value;
     }
 }
 

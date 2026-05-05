@@ -16,5 +16,9 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
     Optional<TestResult> findByScannedBlankId(UUID scannedBlankId);
 
     List<TestResult> findByTestId(UUID testId);
+
+    List<TestResult> findByTestIdIn(List<UUID> testIds);
+
+    void deleteByScannedBlankId(UUID scannedBlankId);
 }
 

@@ -362,6 +362,33 @@ def is_correction_answer_field(roi_name: str) -> bool:
     return roi_name.startswith("corr") and roi_name.endswith("_answer")
 
 
+def prioritize_image_paths(roi_name: str, image_paths: list[str]) -> list[str]:
+    if not image_paths:
+        return image_paths
+    if roi_name.startswith("corr"):
+        return sorted(image_paths, key=lambda path: 0 if path.endswith("_trimmed.png") else 1)
+    return image_paths
+
+
+def should_skip_trocr_for_correction_num(text: str | None) -> bool:
+    normalized = normalize_text(text)
+    if normalized is None:
+        return False
+    compact = normalized.replace(" ", "")
+    if not compact:
+        return False
+    if not any(ch.isdigit() for ch in compact):
+        return True
+    return looks_like_noise(normalized)
+
+
+def should_skip_trocr_for_correction_answer(text: str | None) -> bool:
+    normalized = normalize_text(text)
+    if normalized is None:
+        return False
+    return looks_like_correction_noise(normalized)
+
+
 def build_non_review_correction_result(
     roi_name: str,
     threshold: float,
@@ -591,7 +618,7 @@ def recognize_field_adaptive(provider: BaseOcrProvider, roi_name: str, image_pat
     best_result: OcrFieldResult | None = None
     best_score = float("-inf")
     min_confidence = config.get("min_confidence")
-    for image_path in image_paths:
+    for image_path in prioritize_image_paths(roi_name, image_paths):
         meta = load_empty_meta(image_path)
         if meta is not None and meta.get("is_empty") is True:
             return OcrFieldResult(
@@ -692,7 +719,7 @@ def recognize_field_with_trocr(provider: BaseOcrProvider, roi_name: str, image_p
 
     best_result: OcrFieldResult | None = None
     best_score = float("-inf")
-    for image_path in image_paths:
+    for image_path in prioritize_image_paths(roi_name, image_paths):
         result = provider.recognize_field(roi_name, image_path)
         score = score_ocr_candidate(roi_name, result.text, result.confidence, image_path)
         if score > best_score:
@@ -719,9 +746,10 @@ def recognize_field_cascade(
 ) -> OcrFieldResult:
     threshold = get_cascade_threshold()
     tesseract_result = recognize_field_adaptive(tesseract_provider, roi_name, image_paths)
+    tesseract_confidence = tesseract_result.confidence or 0.0
 
     if is_correction_num_field(roi_name):
-        if accept_correction_num(tesseract_result.text, tesseract_result.confidence) is None:
+        if accept_correction_num(tesseract_result.text, tesseract_result.confidence) is None and should_skip_trocr_for_correction_num(tesseract_result.text):
             return build_non_review_correction_result(
                 roi_name,
                 threshold,
@@ -730,7 +758,7 @@ def recognize_field_cascade(
             )
 
     if is_correction_answer_field(roi_name):
-        if accept_correction_answer(tesseract_result.text, tesseract_result.confidence) is None:
+        if accept_correction_answer(tesseract_result.text, tesseract_result.confidence) is None and should_skip_trocr_for_correction_answer(tesseract_result.text):
             return build_non_review_correction_result(
                 roi_name,
                 threshold,
@@ -738,7 +766,6 @@ def recognize_field_cascade(
                 "invalid_correction_answer",
             )
 
-    tesseract_confidence = tesseract_result.confidence or 0.0
     if tesseract_result.text and tesseract_confidence >= threshold:
         tesseract_result.metadata = {
             "cascadeStage": 1,
@@ -751,6 +778,25 @@ def recognize_field_cascade(
 
     trocr_result = recognize_field_with_trocr(trocr_provider, roi_name, image_paths)
     trocr_confidence = trocr_result.confidence or 0.0
+
+    if is_correction_num_field(roi_name) and accept_correction_num(trocr_result.text, trocr_result.confidence) is None:
+        if accept_correction_num(tesseract_result.text, tesseract_result.confidence) is None:
+            return build_non_review_correction_result(
+                roi_name,
+                threshold,
+                tesseract_result,
+                "invalid_correction_number",
+            )
+
+    if is_correction_answer_field(roi_name) and accept_correction_answer(trocr_result.text, trocr_result.confidence) is None:
+        if accept_correction_answer(tesseract_result.text, tesseract_result.confidence) is None:
+            return build_non_review_correction_result(
+                roi_name,
+                threshold,
+                tesseract_result,
+                "invalid_correction_answer",
+            )
+
     if trocr_result.text and trocr_confidence >= threshold:
         trocr_result.metadata = {
             "cascadeStage": 2,
