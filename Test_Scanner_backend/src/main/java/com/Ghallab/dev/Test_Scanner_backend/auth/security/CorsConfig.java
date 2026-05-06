@@ -15,8 +15,11 @@ public class CorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
-        // Allow your React frontend
-        config.addAllowedOriginPattern("*");
+        // Local development for browser and phone in the same network
+        config.addAllowedOriginPattern("http://localhost:5173");
+        config.addAllowedOriginPattern("http://127.0.0.1:5173");
+        config.addAllowedOriginPattern("http://192.168.56.1:5173");
+        config.addAllowedOriginPattern("http://192.168.0.17:5173");
 
         // Allow all headers
         config.addAllowedHeader("*");

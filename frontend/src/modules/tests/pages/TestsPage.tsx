@@ -13,10 +13,12 @@ export function TestsPage() {
 
   return (
     <Stack spacing={3}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
         <Box>
           <Typography variant="h4">Тесты</Typography>
-          <Typography color="text.secondary">Создавайте тесты, запускайте сканирование и переходите к аналитике.</Typography>
+          <Typography color="text.secondary">
+            Создавайте тесты, запускайте сканирование и переходите к аналитике.
+          </Typography>
         </Box>
         <Button variant="contained" size="large" onClick={() => navigate("/tests/create")}>
           Создать тест
@@ -24,39 +26,56 @@ export function TestsPage() {
       </Box>
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 3 }}><MetricCard label="Всего тестов" value={overviewQuery.data?.totalTests ?? 0} /></Grid>
-        <Grid size={{ xs: 12, md: 3 }}><MetricCard label="Отсканировано бланков" value={overviewQuery.data?.totalScannedBlanks ?? 0} /></Grid>
-        <Grid size={{ xs: 12, md: 3 }}><MetricCard label="Требуют проверки" value={overviewQuery.data?.totalNeedsReview ?? 0} /></Grid>
-        <Grid size={{ xs: 12, md: 3 }}><MetricCard label="Средний процент" value={`${overviewQuery.data?.averagePercentage ?? 0}%`} /></Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <MetricCard label="Всего тестов" value={overviewQuery.data?.totalTests ?? 0} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <MetricCard label="Отсканировано бланков" value={overviewQuery.data?.totalScannedBlanks ?? 0} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <MetricCard label="Требуют проверки" value={overviewQuery.data?.totalNeedsReview ?? 0} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <MetricCard label="Средний процент" value={`${overviewQuery.data?.averagePercentage ?? 0}%`} />
+        </Grid>
       </Grid>
 
-      <SectionCard title="Список тестов" subtitle="Быстрый переход к аналитике, сканированию и проверке.">
+      <SectionCard title="Список тестов" subtitle="Быстрый переход к карточке, сканированию, аналитике и проверке.">
         <Stack spacing={2}>
-          {testsQuery.data?.map((test) => (
-            <Box
-              key={test.id}
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                p: 2,
-                borderRadius: 3,
-                bgcolor: "background.default"
-              }}
-            >
-              <Box>
-                <Typography variant="h6">{test.title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {test.subject} • {test.classLevel} • {test.totalQuestions} вопросов
-                </Typography>
+          {testsQuery.data?.length ? (
+            testsQuery.data.map((test) => (
+              <Box
+                key={test.id}
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: { xs: "flex-start", md: "center" },
+                  flexDirection: { xs: "column", md: "row" },
+                  gap: 1.5,
+                  p: 2,
+                  borderRadius: 3,
+                  bgcolor: "background.default"
+                }}
+              >
+                <Box>
+                  <Typography variant="h6">{test.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {test.subject} • {test.classLevel} • {test.totalQuestions} вопросов
+                  </Typography>
+                </Box>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                  <Button onClick={() => navigate(`/tests/${test.id}`)}>Карточка</Button>
+                  <Button onClick={() => navigate(`/scan/sessions/${test.id}`)}>Сканирование</Button>
+                  <Button onClick={() => navigate(`/tests/${test.id}/analytics`)}>Аналитика</Button>
+                  <Button onClick={() => navigate(`/tests/${test.id}/review`)}>Проверка</Button>
+                </Stack>
               </Box>
-              <Stack direction="row" spacing={1}>
-                <Button onClick={() => navigate(`/tests/${test.id}`)}>Карточка</Button>
-                <Button onClick={() => navigate(`/tests/${test.id}/analytics`)}>Аналитика</Button>
-                <Button onClick={() => navigate(`/tests/${test.id}/review`)}>Проверка</Button>
-              </Stack>
-            </Box>
-          )) ?? <Typography>Загрузка...</Typography>}
+            ))
+          ) : (
+            <Typography color="text.secondary">
+              {testsQuery.isLoading ? "Загрузка..." : "Пока нет тестов."}
+            </Typography>
+          )}
         </Stack>
       </SectionCard>
     </Stack>

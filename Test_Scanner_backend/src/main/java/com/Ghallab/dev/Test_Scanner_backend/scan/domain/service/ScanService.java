@@ -6,7 +6,10 @@ import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScannedBlankDetailedRespons
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScannedBlankResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.StartScanSessionRequest;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.UploadScannedBlankRequest;
+import com.Ghallab.dev.Test_Scanner_backend.scan.dto.RoiMetaResponse;
+import com.Ghallab.dev.Test_Scanner_backend.scan.dto.RoiBoxResponse;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +30,11 @@ public interface ScanService {
      * Receive an uploaded scanned blank image and create an OCR job record.
      */
     Response<ScannedBlankResponse> submitScannedBlank(UploadScannedBlankRequest request);
+
+    /**
+     * Receive an uploaded scanned blank image, generate ROI preview artifacts, but do not start OCR yet.
+     */
+    Response<ScannedBlankResponse> submitScannedBlankForPreview(UploadScannedBlankRequest request);
 
     /**
      * Get all scanned blanks for a specific test
@@ -68,5 +76,31 @@ public interface ScanService {
      * Retry OCR for a specific scanned blank by re-publishing its OCR job.
      */
     Response<ScannedBlankResponse> retryOcr(UUID blankId);
+
+    /**
+     * Rebuild ROI preview artifacts for a specific scanned blank using current ROI overrides.
+     */
+    Response<ScannedBlankResponse> refreshPreview(UUID blankId);
+
+    /**
+     * Resolve a stored asset path for a scanned blank.
+     * Supported kinds: original, processed, annotated, thumbnail.
+     */
+    Path resolveBlankAssetPath(UUID blankId, String kind);
+
+    /**
+     * Read ROI metadata files produced by OCR artifacts for a scanned blank.
+     */
+    Response<List<RoiMetaResponse>> getBlankRoiMetadata(UUID blankId);
+
+    /**
+     * Get stored ROI override coordinates for a scanned blank.
+     */
+    Response<java.util.Map<String, RoiBoxResponse>> getBlankRoiOverrides(UUID blankId);
+
+    /**
+     * Save ROI override coordinates for a scanned blank.
+     */
+    Response<java.util.Map<String, RoiBoxResponse>> saveBlankRoiOverrides(UUID blankId, java.util.Map<String, RoiBoxResponse> overrides);
 }
 

@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import uuid
@@ -18,19 +19,49 @@ from main import OUTPUT_ROOT, ROI_JSON, process_one  # noqa: E402
 from extractor import EXPECTED_ROI_NAMES, ROI_DEFINITIONS, load_rois_from_json  # noqa: E402
 
 
-def load_definitions() -> dict:
-    if os.path.exists(ROI_JSON):
-        definitions = load_rois_from_json(ROI_JSON)
-        print(f"[ocr-pipeline] Loaded {len(definitions)} ROIs from {ROI_JSON}")
-        return definitions
-
-    print(f"[ocr-pipeline] {ROI_JSON} not found, using ROI_DEFINITIONS from extractor.py")
-    return ROI_DEFINITIONS
-
-
 def get_output_dir_for_image(image_path: str) -> str:
     base_name = os.path.splitext(os.path.basename(image_path))[0]
     return os.path.join(OUTPUT_ROOT, base_name)
+
+
+def resolve_override_path_candidates(image_path: str) -> list[str]:
+    original_path = os.path.abspath(os.path.normpath(image_path))
+    base_name = os.path.splitext(os.path.basename(original_path))[0]
+    original_parent = os.path.dirname(original_path)
+    storage_candidate = os.path.join(original_parent, base_name, "roi_overrides.json")
+    output_candidate = os.path.join(get_output_dir_for_image(image_path), "roi_overrides.json")
+    return [storage_candidate, output_candidate]
+
+
+def load_definitions(image_path: str | None = None) -> dict:
+    if os.path.exists(ROI_JSON):
+        definitions = load_rois_from_json(ROI_JSON)
+        print(f"[ocr-pipeline] Loaded {len(definitions)} ROIs from {ROI_JSON}")
+    else:
+        print(f"[ocr-pipeline] {ROI_JSON} not found, using ROI_DEFINITIONS from extractor.py")
+        definitions = dict(ROI_DEFINITIONS)
+
+    if image_path:
+        for override_path in resolve_override_path_candidates(image_path):
+            if not os.path.exists(override_path):
+                continue
+            try:
+                with open(override_path, "r", encoding="utf-8") as override_file:
+                    overrides = json.load(override_file)
+                if isinstance(overrides, dict):
+                    for roi_name, box in overrides.items():
+                        if isinstance(box, dict):
+                            x1 = int(box.get("x1", 0))
+                            y1 = int(box.get("y1", 0))
+                            x2 = int(box.get("x2", 0))
+                            y2 = int(box.get("y2", 0))
+                            definitions[roi_name] = (x1, y1, x2, y2)
+                    print(f"[ocr-pipeline] Applied ROI overrides from {override_path}")
+                    break
+            except Exception as exc:
+                print(f"[ocr-pipeline] Failed to load ROI overrides from {override_path}: {exc}")
+
+    return definitions
 
 
 def collect_clean_crops(output_dir: str) -> dict[str, list[str]]:
@@ -194,7 +225,7 @@ def attach_trimmed_variants(output_dir: str, clean_crops: dict[str, list[str]]) 
 
 
 def build_payload_for_image(image_path: str) -> dict[str, Any] | None:
-    definitions = load_definitions()
+    definitions = load_definitions(image_path)
     pipeline_result = process_one(image_path, definitions)
     if pipeline_result is None:
         return None

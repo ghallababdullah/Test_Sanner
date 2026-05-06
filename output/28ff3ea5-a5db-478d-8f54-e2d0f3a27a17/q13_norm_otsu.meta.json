@@ -1,0 +1,9 @@
+{
+  "roi_name": "q13",
+  "is_empty": false,
+  "ink_ratio": 0.05933366817344718,
+  "num_components": 12,
+  "meaningful_components": 11,
+  "total_area": 1772,
+  "max_area": 209
+}

@@ -1,0 +1,9 @@
+{
+  "roi_name": "q27",
+  "is_empty": false,
+  "ink_ratio": 0.02067479759546892,
+  "num_components": 5,
+  "meaningful_components": 5,
+  "total_area": 595,
+  "max_area": 181
+}

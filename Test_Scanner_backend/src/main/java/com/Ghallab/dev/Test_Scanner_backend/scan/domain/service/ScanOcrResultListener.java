@@ -63,7 +63,8 @@ public class ScanOcrResultListener {
         if ("PROCESSING".equalsIgnoreCase(status)) {
             applyProcessingResult(blank, event);
         } else if ("OCR_COMPLETED".equalsIgnoreCase(status)) {
-            shouldAutoScore = applyCompletedResult(blank, event);
+            applyCompletedResult(blank, event);
+            shouldAutoScore = true;
         } else {
             applyFailedResult(blank, event);
         }
@@ -83,7 +84,7 @@ public class ScanOcrResultListener {
         log.info("Applied OCR result for blank={} status={}", blankId, savedBlank.getProcessingStatus());
     }
 
-    private boolean applyCompletedResult(ScannedBlank blank, OcrResultEvent event) throws JsonProcessingException {
+    private void applyCompletedResult(ScannedBlank blank, OcrResultEvent event) throws JsonProcessingException {
         var filteredAnswers = scannedBlankResultService.filterAnswersForTest(
                 blank.getTest().getId(),
                 event.getAnswers()
@@ -122,7 +123,6 @@ public class ScanOcrResultListener {
         } else if (!needsReview) {
             blank.setReviewNotes(null);
         }
-        return !needsReview;
     }
 
     private void applyProcessingResult(ScannedBlank blank, OcrResultEvent event) {

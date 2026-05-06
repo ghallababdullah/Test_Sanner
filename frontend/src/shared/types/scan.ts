@@ -51,12 +51,42 @@ export interface StudentAnswerGrade {
   matchType: string;
 }
 
+export interface OcrAnswerAssessment {
+  questionNumber: number;
+  recognizedConfidence?: number;
+  tesseractConfidence?: number;
+  trocrConfidence?: number;
+  combinedConfidence?: number;
+  engine?: string;
+  status?: string;
+  reviewRecommended?: boolean;
+}
+
+export interface RoiMeta {
+  roiName: string;
+  empty?: boolean;
+  inkRatio?: number;
+  numComponents?: number;
+  meaningfulComponents?: number;
+  totalArea?: number;
+  maxArea?: number;
+  sourceFile?: string;
+}
+
+export interface RoiBox {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
 export interface ScannedBlankDetailedResponse {
   id: string;
   scanSessionId: string;
   testId: string;
   studentName: string;
   studentClass: string;
+  testDate?: string;
   overallConfidence: number;
   needsReview: boolean;
   reviewStatus: string;
@@ -71,10 +101,12 @@ export interface ScannedBlankDetailedResponse {
   grade: string;
   feedback: string;
   reviewNotes: string | null;
+  answerAssessments: Record<string, OcrAnswerAssessment>;
   answerGrades: StudentAnswerGrade[];
   originalImagePath: string;
   processedImagePath: string;
   processingStatus: string;
+  processingError?: string;
   scannedAt?: string;
   processedAt?: string;
   createdAt?: string;

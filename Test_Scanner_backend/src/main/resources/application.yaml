@@ -51,10 +51,10 @@ spring:
           multiplier: 2.0
 
   mail:
-    host: smtp.mailtrap.io
-    port: 587
-    username: 7574b621c1f8bf
-    password: c9d5b38ae805b0
+    host: ${MAIL_HOST:smtp.mailtrap.io}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:your_mail_username}
+    password: ${MAIL_PASSWORD:your_mail_password}
     properties:
       mail:
         smtp:
@@ -64,8 +64,12 @@ spring:
 
 app:
   mail:
-    from: no-reply@scannerage.dev
-    name: ScannerAGE Notifications
+    from: ${APP_MAIL_FROM:no-reply@skanproverka.local}
+    name: ${APP_MAIL_NAME:СканПроверка}
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
+  backend:
+    public-base-url: ${BACKEND_PUBLIC_BASE_URL:http://localhost:8080}
   scan:
     storage:
       root-dir: ${SCAN_STORAGE_ROOT:./storage/scans}

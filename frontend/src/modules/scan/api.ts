@@ -1,3 +1,4 @@
+import type { AxiosProgressEvent } from "axios";
 import { http } from "../../shared/api/http";
 import type { ApiResponse } from "../../shared/types/api";
 import type {
@@ -16,6 +17,7 @@ export async function submitScannedBlank(payload: {
   testId: string;
   image: File;
   testDate?: string;
+  onUploadProgress?: (event: AxiosProgressEvent) => void;
 }) {
   const formData = new FormData();
   formData.append("scanSessionId", payload.scanSessionId);
@@ -28,7 +30,32 @@ export async function submitScannedBlank(payload: {
   const { data } = await http.post<ApiResponse<ScannedBlankResponse>>("/scan/submit-blank", formData, {
     headers: {
       "Content-Type": "multipart/form-data"
-    }
+    },
+    onUploadProgress: payload.onUploadProgress
+  });
+  return data.data;
+}
+
+export async function submitScannedBlankForPreview(payload: {
+  scanSessionId: string;
+  testId: string;
+  image: File;
+  testDate?: string;
+  onUploadProgress?: (event: AxiosProgressEvent) => void;
+}) {
+  const formData = new FormData();
+  formData.append("scanSessionId", payload.scanSessionId);
+  formData.append("testId", payload.testId);
+  if (payload.testDate) {
+    formData.append("testDate", payload.testDate);
+  }
+  formData.append("image", payload.image);
+
+  const { data } = await http.post<ApiResponse<ScannedBlankResponse>>("/scan/submit-blank-preview", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    },
+    onUploadProgress: payload.onUploadProgress
   });
   return data.data;
 }

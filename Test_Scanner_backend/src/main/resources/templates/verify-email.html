@@ -1,210 +1,41 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Verification</title>
+    <title>Подтверждение почты</title>
     <style>
-        /* SAME STYLES AS PASSWORD RESET */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f7fa;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 20px auto;
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 28px;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            font-size: 14px;
-            opacity: 0.95;
-        }
-
-        .content {
-            padding: 40px 30px;
-        }
-
-        .greeting {
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 25px;
-            font-weight: 500;
-        }
-
-        .greeting strong {
-            color: #667eea;
-        }
-
-        .message {
-            font-size: 14px;
-            color: #555;
-            line-height: 1.8;
-            margin-bottom: 25px;
-        }
-
-        .cta-container {
-            text-align: center;
-            margin: 35px 0;
-        }
-
-        .verify-btn {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 14px 40px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 16px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .verify-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
-        }
-
-        .link-box {
-            background-color: #f9f9f9;
-            border-left: 4px solid #667eea;
-            padding: 15px;
-            margin: 25px 0;
-            border-radius: 4px;
-        }
-
-        .link-box p {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-        .link-box .link {
-            word-break: break-all;
-            font-size: 11px;
-            color: #667eea;
-            font-family: 'Courier New', monospace;
-            background-color: #fff;
-            padding: 8px;
-            border-radius: 3px;
-            display: block;
-        }
-
-        .warning {
-            background-color: #fff3cd;
-            border: 1px solid #ffc107;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 25px 0;
-            color: #856404;
-            font-size: 13px;
-        }
-
-        .footer {
-            background-color: #f9f9f9;
-            padding: 25px 30px;
-            text-align: center;
-            border-top: 1px solid #eee;
-            font-size: 12px;
-            color: #999;
-        }
+        body { margin: 0; padding: 0; background: #f6f2ea; font-family: "Segoe UI", Arial, sans-serif; color: #1f2933; }
+        .wrapper { max-width: 620px; margin: 24px auto; background: #fff; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 28px rgba(31,78,95,0.12); }
+        .header { background: linear-gradient(135deg, #1f4e5f, #c86b3c); color: #fff; padding: 36px 28px; }
+        .content { padding: 32px 28px; line-height: 1.7; font-size: 15px; }
+        .button-wrap { text-align: center; margin: 28px 0; }
+        .button { display: inline-block; background: #1f4e5f; color: #fff !important; text-decoration: none; padding: 14px 26px; border-radius: 10px; font-weight: 700; }
+        .box { background: #f8fafb; border: 1px solid #dbe5e8; border-radius: 12px; padding: 16px; margin: 20px 0; }
+        .box code { display: block; word-break: break-all; color: #1f4e5f; font-size: 13px; }
+        .footer { padding: 20px 28px 28px; color: #6b7280; font-size: 13px; text-align: center; border-top: 1px solid #eef2f4; }
     </style>
 </head>
 <body>
-
-<div class="container">
-
-    <!-- Header -->
+<div class="wrapper">
     <div class="header">
-        <h1>📧 Verify Your Email</h1>
-        <p>Complete your registration</p>
+        <h1>Подтвердите электронную почту</h1>
+        <p>Остался один шаг до начала работы в СканПроверка</p>
     </div>
-
-    <!-- Content -->
     <div class="content">
-
-        <!-- Greeting -->
-        <div class="greeting">
-            Hi <strong th:text="${fullName}">User</strong>,
+        <p>Здравствуйте, <strong th:text="${firstName} ?: 'пользователь'">пользователь</strong>.</p>
+        <p>Спасибо за регистрацию в системе <strong>СканПроверка</strong>. Чтобы активировать аккаунт, подтвердите электронную почту.</p>
+        <div class="button-wrap">
+            <a class="button" th:href="${verificationLink}">Подтвердить почту</a>
         </div>
-
-        <!-- Message -->
-        <div class="message">
-            <p>
-                Thank you for registering with <strong>Age Scanner</strong>.
-                To activate your account, please verify your email address by clicking the button below.
-            </p>
+        <div class="box">
+            <strong>Если кнопка не открывается, скопируйте ссылку вручную:</strong>
+            <code th:text="${verificationLink}">http://localhost:8080/api/auth/verify-email</code>
         </div>
-
-        <!-- CTA -->
-        <div class="cta-container">
-            <a th:href="${verificationLink}" class="verify-btn">
-                Verify Email Address
-            </a>
-        </div>
-
-        <p style="text-align:center;font-size:13px;color:#999">
-            Or copy and paste the link below
-        </p>
-
-        <!-- Link Box -->
-        <div class="link-box">
-            <p>Verification Link:</p>
-            <span class="link" th:text="${verificationLink}"></span>
-        </div>
-
-        <!-- Expiry -->
-        <div class="warning">
-            <strong>⏱️ Important:</strong>
-            This verification link is valid for <strong>24 hours</strong>.
-            If it expires, please register again.
-        </div>
-
-        <div class="message">
-            <p>
-                If you did not create an account, you can safely ignore this email.
-            </p>
-            <p style="margin-top: 15px;">
-                Best regards,<br>
-                <strong>Age Scanner Team</strong>
-            </p>
-        </div>
-
+        <p>После подтверждения вы сможете войти в приложение:</p>
+        <p><a th:href="${loginLink}" th:text="${loginLink}">http://localhost:5173/login</a></p>
     </div>
-
-    <!-- Footer -->
-    <div class="footer">
-        <p>&copy; 2024 Age Scanner. All rights reserved.</p>
-        <p>This is an automated email. Please do not reply.</p>
-    </div>
-
+    <div class="footer">Это автоматическое письмо от СканПроверка. Если вы не создавали аккаунт, просто проигнорируйте его.</div>
 </div>
-
 </body>
 </html>

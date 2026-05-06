@@ -1,13 +1,15 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Chip,
   Divider,
   Grid,
   IconButton,
+  LinearProgress,
   Stack,
   Tab,
   Tabs,
@@ -18,11 +20,31 @@ import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import CameraswitchRoundedIcon from "@mui/icons-material/CameraswitchRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
+import HourglassBottomRoundedIcon from "@mui/icons-material/HourglassBottomRounded";
+import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import { useNavigate, useParams } from "react-router-dom";
 import { SectionCard } from "../../../shared/components/SectionCard";
 import { fetchTestDetails } from "../../tests/api";
-import { fetchSessionBlanks, startScanSession, submitScannedBlank } from "../api";
+import { fetchSessionBlanks, startScanSession, submitScannedBlank, submitScannedBlankForPreview } from "../api";
 import type { ScanSessionResponse } from "../../../shared/types/scan";
+
+type CaptureMode = "file" | "camera";
+type QueueStatus = "queued" | "uploading" | "uploaded" | "failed";
+type ProcessingFlow = "guided" | "quick";
+
+type QueuedBlank = {
+  id: string;
+  file: File;
+  previewUrl: string;
+  source: CaptureMode;
+  status: QueueStatus;
+  progress: number;
+  message?: string;
+  uploadedBlankId?: string;
+};
 
 function clampText(value: string, maxLength: number) {
   return value.length > maxLength ? value.slice(0, maxLength) : value;
@@ -53,16 +75,211 @@ function buildDeviceInfo() {
   };
 }
 
+function buildQueueItems(files: File[], source: CaptureMode): QueuedBlank[] {
+  return files.map((file) => ({
+    id: `${source}-${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+    file,
+    previewUrl: URL.createObjectURL(file),
+    source,
+    status: "queued",
+    progress: 0
+  }));
+}
+
+function buildCapturedFile(blob: Blob) {
+  const extension = blob.type === "image/png" ? "png" : "jpg";
+  return new File(
+    [blob],
+    `scan-${new Date().toISOString().replace(/[:.]/g, "-")}.${extension}`,
+    { type: blob.type || "image/jpeg" }
+  );
+}
+
+function statusLabel(status: QueueStatus) {
+  switch (status) {
+    case "uploading":
+      return "Загружается";
+    case "uploaded":
+      return "Отправлен";
+    case "failed":
+      return "Ошибка";
+    default:
+      return "Ожидает";
+  }
+}
+
+function statusColor(status: QueueStatus): "default" | "warning" | "success" | "error" {
+  switch (status) {
+    case "uploading":
+      return "warning";
+    case "uploaded":
+      return "success";
+    case "failed":
+      return "error";
+    default:
+      return "default";
+  }
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) {
+    return `${bytes} Б`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} КБ`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+}
+
+function CameraGuide({
+  available,
+  status,
+  error,
+  onOpenFallback,
+  onCapture,
+  videoRef
+}: {
+  available: boolean;
+  status: string;
+  error: string | null;
+  onOpenFallback: () => void;
+  onCapture: () => void;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+}) {
+  return (
+    <SectionCard
+      title="Камера устройства"
+      subtitle="Расположите бланк внутри A4-рамки. Так системе легче найти лист и правильно разметить поля ещё до распознавания."
+    >
+      <Stack spacing={2}>
+        <Box
+          sx={{
+            position: "relative",
+            borderRadius: 4,
+            overflow: "hidden",
+            bgcolor: "#101826",
+            minHeight: { xs: 320, md: 380 },
+            border: "1px solid rgba(255,255,255,0.12)"
+          }}
+        >
+          {available ? (
+            <>
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  minHeight: 320,
+                  objectFit: "cover",
+                  display: "block"
+                }}
+              />
+              <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+                <Box
+                  sx={{
+                    position: "absolute",
+                    left: "10%",
+                    right: "10%",
+                    top: "8%",
+                    bottom: "8%",
+                    borderRadius: 3,
+                    border: "3px solid rgba(255,255,255,0.95)",
+                    boxShadow: "0 0 0 9999px rgba(6, 11, 20, 0.28)"
+                  }}
+                />
+                <Box
+                  sx={{
+                    position: "absolute",
+                    left: "50%",
+                    bottom: 16,
+                    transform: "translateX(-50%)",
+                    px: 2,
+                    py: 0.75,
+                    bgcolor: "rgba(10, 17, 29, 0.72)",
+                    borderRadius: 999,
+                    color: "common.white"
+                  }}
+                >
+                  <Typography variant="body2">Держите бланк внутри рамки A4</Typography>
+                </Box>
+              </Box>
+            </>
+          ) : (
+            <Stack
+              spacing={2}
+              sx={{
+                minHeight: 320,
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                p: 3,
+                color: "common.white"
+              }}
+            >
+              <Avatar sx={{ width: 64, height: 64, bgcolor: "rgba(255,255,255,0.12)" }}>
+                <CameraswitchRoundedIcon />
+              </Avatar>
+              <Typography variant="h6">Камера не запущена</Typography>
+              <Typography variant="body2" sx={{ maxWidth: 420, opacity: 0.8 }}>
+                {error ?? "Если браузер не даёт live-preview, можно открыть системную камеру и добавить фото через стандартный выбор файла."}
+              </Typography>
+              <Button variant="contained" onClick={onOpenFallback} startIcon={<PhotoCameraRoundedIcon />}>
+                Открыть камеру устройства
+              </Button>
+            </Stack>
+          )}
+        </Box>
+
+        <Alert severity={error ? "warning" : "info"}>
+          {error ?? status}
+        </Alert>
+
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <Button variant="contained" startIcon={<PhotoCameraRoundedIcon />} onClick={onCapture} disabled={!available}>
+            Снять бланк
+          </Button>
+          <Button variant="outlined" startIcon={<CameraswitchRoundedIcon />} onClick={onOpenFallback}>
+            Открыть системную камеру
+          </Button>
+        </Stack>
+      </Stack>
+    </SectionCard>
+  );
+}
+
 export function ScanSessionsPage() {
   const { sessionId = "" } = useParams();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"file" | "camera">("file");
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [mode, setMode] = useState<CaptureMode>("file");
+  const [processingFlow, setProcessingFlow] = useState<ProcessingFlow>("guided");
+  const [queueItems, setQueueItems] = useState<QueuedBlank[]>([]);
   const [session, setSession] = useState<ScanSessionResponse | null>(null);
   const [testDate, setTestDate] = useState("");
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraStatus, setCameraStatus] = useState("Откройте камеру и расположите лист внутри рамки A4.");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const queueRef = useRef<QueuedBlank[]>([]);
   const isDemoMode = sessionId === "demo";
+
+  useEffect(() => {
+    queueRef.current = queueItems;
+  }, [queueItems]);
+
+  useEffect(() => {
+    return () => {
+      queueRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   const testQuery = useQuery({
     queryKey: ["test-details", sessionId],
@@ -75,7 +292,8 @@ export function ScanSessionsPage() {
   const sessionBlanksQuery = useQuery({
     queryKey: ["scan-session-blanks", effectiveSessionId],
     queryFn: () => fetchSessionBlanks(effectiveSessionId),
-    enabled: !!effectiveSessionId
+    enabled: !!effectiveSessionId,
+    refetchInterval: effectiveSessionId ? 5000 : false
   });
 
   const startSessionMutation = useMutation({
@@ -95,33 +313,151 @@ export function ScanSessionsPage() {
     }
   });
 
+  const updateQueueItem = (id: string, updater: (item: QueuedBlank) => QueuedBlank) => {
+    setQueueItems((current) => current.map((item) => (item.id === id ? updater(item) : item)));
+  };
+
+  const clearQueue = (items: QueuedBlank[]) => {
+    items.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    setQueueItems([]);
+  };
+
   const uploadMutation = useMutation({
     mutationFn: async () => {
-      if (!session?.id || !testQuery.data?.id || selectedFiles.length === 0) {
-        throw new Error("Session, test and files are required");
+      if (!testQuery.data?.id || queueItems.length === 0) {
+        throw new Error("Test and files are required");
       }
 
+      let activeSession = session;
+      if (!activeSession) {
+        activeSession = await startSessionMutation.mutateAsync();
+        setSession(activeSession);
+      }
+
+      if (!activeSession?.id) {
+        throw new Error("Scan session was not created");
+      }
+
+      const submitFn = processingFlow === "guided" ? submitScannedBlankForPreview : submitScannedBlank;
       const uploadedBlanks = [];
-      for (const file of selectedFiles) {
-        const uploadedBlank = await submitScannedBlank({
-          scanSessionId: session.id,
-          testId: testQuery.data.id,
-          image: file,
-          testDate: testDate || undefined
-        });
-        uploadedBlanks.push(uploadedBlank);
+
+      for (const item of queueItems) {
+        updateQueueItem(item.id, (current) => ({
+          ...current,
+          status: "uploading",
+          progress: 0,
+          message: processingFlow === "guided" ? "Подготавливаем предварительную разметку" : "Загружаем файл в очередь на распознавание"
+        }));
+
+        try {
+          const uploadedBlank = await submitFn({
+            scanSessionId: activeSession.id,
+            testId: testQuery.data.id,
+            image: item.file,
+            testDate: testDate || undefined,
+            onUploadProgress: (event) => {
+              const total = event.total ?? item.file.size;
+              const progress = total > 0 ? Math.min(100, Math.round((event.loaded / total) * 100)) : 0;
+              updateQueueItem(item.id, (current) => ({
+                ...current,
+                progress,
+                message: progress >= 100
+                  ? (processingFlow === "guided" ? "Файл передан, строим разметку полей" : "Файл передан, ждём запуска распознавания")
+                  : `Загрузка ${progress}%`
+              }));
+            }
+          });
+
+          uploadedBlanks.push(uploadedBlank);
+          updateQueueItem(item.id, (current) => ({
+            ...current,
+            status: "uploaded",
+            progress: 100,
+            message: processingFlow === "guided"
+              ? "Предварительная разметка готова. Можно проверить поля перед распознаванием."
+              : "Бланк отправлен в очередь на распознавание",
+            uploadedBlankId: uploadedBlank.id
+          }));
+        } catch (error) {
+          updateQueueItem(item.id, (current) => ({
+            ...current,
+            status: "failed",
+            message: error instanceof Error ? error.message : "Не удалось загрузить бланк"
+          }));
+          throw error;
+        }
       }
 
       return uploadedBlanks;
     },
-    onSuccess: (uploadedBlanks) => {
-      setSelectedFiles([]);
-      sessionBlanksQuery.refetch();
+    onSuccess: async (uploadedBlanks) => {
+      await sessionBlanksQuery.refetch();
+      const snapshot = [...queueRef.current];
+      clearQueue(snapshot);
       if (uploadedBlanks.length === 1) {
-        navigate(`/scan/blanks/${uploadedBlanks[0].id}`);
+        navigate(
+          processingFlow === "guided"
+            ? `/scan/blanks/${uploadedBlanks[0].id}/roi-review`
+            : `/scan/blanks/${uploadedBlanks[0].id}`
+        );
+      } else if (uploadedBlanks.length > 1 && processingFlow === "guided") {
+        navigate(`/scan/blanks/${uploadedBlanks[0].id}/roi-review`);
       }
     }
   });
+
+  useEffect(() => {
+    if (mode !== "camera") {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Браузер не поддерживает live-камеру. Можно использовать системную камеру через кнопку ниже.");
+      return;
+    }
+
+    let cancelled = false;
+    const startCamera = async () => {
+      try {
+        setCameraError(null);
+        setCameraStatus("Поднесите телефон ближе и держите лист полностью внутри рамки.");
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch {
+        setCameraError("Не удалось открыть live-камеру. Проверьте разрешение браузера или используйте системную камеру.");
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      cancelled = true;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [mode]);
 
   const helperText = useMemo(() => {
     if (isDemoMode) {
@@ -133,23 +469,65 @@ export function ScanSessionsPage() {
     return `Сессия активна. Уже загружено бланков: ${sessionBlanksQuery.data?.length ?? 0}.`;
   }, [isDemoMode, session, sessionBlanksQuery.data]);
 
-  const appendFiles = (files: FileList | null) => {
+  const appendFiles = (files: FileList | null, source: CaptureMode) => {
     if (!files || files.length === 0) {
       return;
     }
-    setSelectedFiles((current) => [...current, ...Array.from(files)]);
+    setQueueItems((current) => [...current, ...buildQueueItems(Array.from(files), source)]);
+    if (source === "camera") {
+      setCameraStatus("Снимок добавлен. Можно сделать ещё один или отправить очередь.");
+    }
   };
 
-  const removeSelectedFile = (indexToRemove: number) => {
-    setSelectedFiles((current) => current.filter((_, index) => index !== indexToRemove));
+  const removeQueueItem = (id: string) => {
+    setQueueItems((current) => {
+      const target = current.find((item) => item.id === id);
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return current.filter((item) => item.id !== id);
+    });
   };
+
+  const captureFrame = () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) {
+      setCameraError("Камера ещё не готова. Подождите секунду и попробуйте снова.");
+      return;
+    }
+
+    const canvas = canvasRef.current ?? document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      setCameraError("Не удалось подготовить снимок камеры.");
+      return;
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        setCameraError("Не удалось сохранить снимок. Попробуйте ещё раз.");
+        return;
+      }
+      const file = buildCapturedFile(blob);
+      setQueueItems((current) => [...current, ...buildQueueItems([file], "camera")]);
+      setCameraError(null);
+      setCameraStatus("Снимок добавлен в очередь. При необходимости снимите ещё один бланк.");
+    }, "image/jpeg", 0.95);
+  };
+
+  const queuedCount = queueItems.filter((item) => item.status === "queued").length;
+  const uploadedCount = queueItems.filter((item) => item.status === "uploaded").length;
 
   return (
     <Stack spacing={3}>
       <Box>
         <Typography variant="h4">Сканирование</Typography>
         <Typography color="text.secondary">
-          Запускайте отдельную сессию для каждого теста и загружайте бланки с телефона или компьютера.
+          Выберите удобный режим: сначала проверить поля на бланке или сразу отправить работу на распознавание.
         </Typography>
       </Box>
 
@@ -162,12 +540,18 @@ export function ScanSessionsPage() {
       {startSessionMutation.isError ? (
         <Alert severity="error">Не удалось создать сессию сканирования.</Alert>
       ) : null}
+
       {uploadMutation.isError ? (
-        <Alert severity="error">Не удалось загрузить бланки. Проверьте, что файлы выбраны и сессия уже создана.</Alert>
+        <Alert severity="error">
+          Один из бланков не удалось загрузить. Исправьте проблему и повторите отправку.
+        </Alert>
       ) : null}
-      {uploadMutation.isSuccess && selectedFiles.length === 0 ? (
+
+      {uploadMutation.isSuccess && queueItems.length === 0 ? (
         <Alert severity="success">
-          Бланки отправлены. Каждый бланк уходит в backend отдельно, а дальше RabbitMQ уже организует OCR-обработку для каждого изображения.
+          {processingFlow === "guided"
+            ? "Бланки загружены в режим предварительной проверки полей."
+            : "Бланки отправлены в очередь на распознавание. Каждый будет обработан отдельно."}
         </Alert>
       ) : null}
 
@@ -192,142 +576,239 @@ export function ScanSessionsPage() {
             </Alert>
           ) : null}
 
-          {!isDemoMode ? (
-            <Alert severity="info">
-              Можно отправить несколько бланков за один раз. При загрузке фронтенд отправит все выбранные изображения в одну сессию по очереди, а backend и RabbitMQ обработают их независимо.
-            </Alert>
-          ) : null}
+          <SectionCard
+            title="Режим обработки"
+            subtitle="В одном режиме можно сначала проверить разметку полей. Во втором распознавание запускается сразу."
+          >
+            <Stack spacing={2}>
+              <Tabs value={processingFlow} onChange={(_, value) => setProcessingFlow(value)} variant="scrollable">
+                <Tab value="guided" label="Проверить поля перед распознаванием" />
+                <Tab value="quick" label="Сразу распознать бланк" />
+              </Tabs>
+              {processingFlow === "guided" ? (
+                <Alert severity="info">
+                  Сначала загружаем бланк, показываем разметку полей, вы её подтверждаете, и только потом запускается распознавание.
+                </Alert>
+              ) : (
+                <Alert severity="warning">
+                  Бланк сразу уходит в очередь на распознавание без шага проверки полей. Это быстрее, но риск ошибок выше.
+                </Alert>
+              )}
+            </Stack>
+          </SectionCard>
 
           <Divider />
 
           <Box>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              Как загрузить бланки
+              Как добавить бланки
             </Typography>
             <Tabs value={mode} onChange={(_, value) => setMode(value)} sx={{ mb: 2 }} variant="scrollable">
-              <Tab value="file" label="Загрузить файлы" />
-              <Tab value="camera" label="Камера устройства" />
+              <Tab value="file" label="Файлы" />
+              <Tab value="camera" label="Камера телефона" />
             </Tabs>
 
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 7 }}>
-                <SectionCard
-                  title={mode === "file" ? "Загрузка файлов" : "Съёмка с камеры"}
-                  subtitle={
-                    mode === "file"
-                      ? "Можно выбрать сразу несколько изображений бланков."
-                      : "На телефоне можно открыть камеру устройства, сделать снимок, а затем снова открыть камеру и добавить следующий бланк."
-                  }
-                >
-                  <Stack spacing={2}>
-                    <TextField
-                      label="Дата теста"
-                      type="date"
-                      value={testDate}
-                      onChange={(event) => setTestDate(event.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                    />
+              <Grid size={{ xs: 12, lg: 7 }}>
+                {mode === "file" ? (
+                  <SectionCard
+                    title="Загрузка файлов"
+                    subtitle="Можно выбрать сразу несколько бланков. Они войдут в одну scan session, но каждый будет обработан как отдельный бланк."
+                  >
+                    <Stack spacing={2}>
+                      <TextField
+                        label="Дата теста"
+                        type="date"
+                        value={testDate}
+                        onChange={(event) => setTestDate(event.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                      />
 
-                    {mode === "file" ? (
-                      <>
-                        <input
-                          ref={inputRef}
-                          hidden
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={(event) => {
-                            appendFiles(event.target.files);
-                            event.target.value = "";
-                          }}
-                        />
-                        <Button
-                          startIcon={<CloudUploadRoundedIcon />}
-                          variant="contained"
-                          onClick={() => inputRef.current?.click()}
-                        >
-                          Выбрать файлы
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <input
-                          ref={cameraInputRef}
-                          hidden
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={(event) => {
-                            appendFiles(event.target.files);
-                            event.target.value = "";
-                          }}
-                        />
-                        <Button
-                          startIcon={<PhotoCameraRoundedIcon />}
-                          variant="contained"
-                          onClick={() => cameraInputRef.current?.click()}
-                        >
-                          Открыть камеру
-                        </Button>
-                        <Typography variant="body2" color="text.secondary">
-                          Да, сейчас на мобильном устройстве можно открыть камеру телефона. После первого снимка можно снова нажать кнопку и добавить ещё один бланк в ту же очередь.
-                        </Typography>
-                      </>
-                    )}
+                      <input
+                        ref={inputRef}
+                        hidden
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={(event) => {
+                          appendFiles(event.target.files, "file");
+                          event.target.value = "";
+                        }}
+                      />
 
-                    {selectedFiles.length ? (
-                      <Stack spacing={1}>
-                        <Typography variant="body2" color="text.secondary">
-                          Выбрано бланков: {selectedFiles.length}
-                        </Typography>
-                        {selectedFiles.map((file, index) => (
-                          <Box
-                            key={`${file.name}-${index}`}
-                            sx={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              p: 1,
-                              borderRadius: 2,
-                              bgcolor: "background.default"
-                            }}
-                          >
-                            <Chip label={file.name} color="success" />
-                            <IconButton color="error" onClick={() => removeSelectedFile(index)}>
-                              <DeleteOutlineRoundedIcon />
-                            </IconButton>
-                          </Box>
-                        ))}
-                      </Stack>
-                    ) : null}
+                      <Button startIcon={<CloudUploadRoundedIcon />} variant="contained" onClick={() => inputRef.current?.click()}>
+                        Выбрать файлы
+                      </Button>
 
-                    <Button
-                      variant="outlined"
-                      disabled={!session || selectedFiles.length === 0 || uploadMutation.isPending}
-                      onClick={() => uploadMutation.mutate()}
-                    >
-                      {uploadMutation.isPending
-                        ? "Загружаем..."
-                        : selectedFiles.length > 1
-                          ? `Загрузить ${selectedFiles.length} бланков`
-                          : "Загрузить бланк"}
-                    </Button>
-                  </Stack>
-                </SectionCard>
+                      <Typography variant="body2" color="text.secondary">
+                        Подойдут несколько JPG или PNG-файлов. После выбора они появятся в очереди ниже.
+                      </Typography>
+                    </Stack>
+                  </SectionCard>
+                ) : (
+                  <CameraGuide
+                    available={Boolean(streamRef.current)}
+                    status={cameraStatus}
+                    error={cameraError}
+                    videoRef={videoRef}
+                    onCapture={captureFrame}
+                    onOpenFallback={() => cameraInputRef.current?.click()}
+                  />
+                )}
               </Grid>
 
-              <Grid size={{ xs: 12, md: 5 }}>
+              <Grid size={{ xs: 12, lg: 5 }}>
                 <SectionCard title="Подсказки по качеству">
                   <Stack spacing={1.5}>
-                    <Typography>• Бланк должен быть хорошо освещён</Typography>
-                    <Typography>• Камера должна смотреть прямо на лист</Typography>
-                    <Typography>• Углы и метки должны быть полностью видны</Typography>
-                    <Typography>• Лучше использовать ровный однотонный фон</Typography>
+                    <Typography>• Весь лист A4 должен быть виден целиком</Typography>
+                    <Typography>• Камеру лучше держать параллельно бланку</Typography>
+                    <Typography>• Углы и маркеры должны попадать внутрь кадра</Typography>
+                    <Typography>• Если фото плохое, лучше переснять сразу, чем исправлять потом</Typography>
+                    <Typography>• В режиме проверки после загрузки откроется шаг проверки разметки полей</Typography>
                   </Stack>
                 </SectionCard>
               </Grid>
             </Grid>
           </Box>
+
+          <input
+            ref={cameraInputRef}
+            hidden
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={(event) => {
+              appendFiles(event.target.files, "camera");
+              event.target.value = "";
+            }}
+          />
+          <canvas ref={canvasRef} hidden />
+
+          <SectionCard
+            title="Очередь бланков"
+            subtitle={
+              queueItems.length
+                ? `Сейчас в очереди: ${queueItems.length}. Ожидают отправки: ${queuedCount}. Уже отправлены: ${uploadedCount}.`
+                : "Добавьте хотя бы один бланк, и здесь появятся миниатюры, статусы и progress по каждому файлу."
+            }
+          >
+            <Stack spacing={2}>
+              {queueItems.length === 0 ? (
+                <Alert severity="info">
+                  Пока очередь пуста. Выберите файлы или сделайте фото через камеру телефона.
+                </Alert>
+              ) : (
+                <Grid container spacing={2}>
+                  {queueItems.map((item, index) => (
+                    <Grid key={item.id} size={{ xs: 12, md: 6 }}>
+                      <Box
+                        sx={{
+                          borderRadius: 3,
+                          overflow: "hidden",
+                          border: "1px solid",
+                          borderColor: "divider",
+                          bgcolor: "background.paper"
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={item.previewUrl}
+                          alt={item.file.name}
+                          sx={{ width: "100%", height: 180, objectFit: "cover", display: "block" }}
+                        />
+                        <Stack spacing={1.5} sx={{ p: 2 }}>
+                          <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="flex-start">
+                            <Box>
+                              <Typography variant="subtitle2">{`Бланк ${index + 1}`}</Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ wordBreak: "break-word" }}>
+                                {item.file.name}
+                              </Typography>
+                            </Box>
+                            <IconButton color="error" onClick={() => removeQueueItem(item.id)} disabled={item.status === "uploading"}>
+                              <DeleteOutlineRoundedIcon />
+                            </IconButton>
+                          </Stack>
+
+                          <Stack direction="row" spacing={1} flexWrap="wrap">
+                            <Chip
+                              size="small"
+                              label={item.source === "camera" ? "Камера" : "Файл"}
+                              icon={item.source === "camera" ? <PhotoCameraRoundedIcon /> : <ImageRoundedIcon />}
+                            />
+                            <Chip
+                              size="small"
+                              color={statusColor(item.status)}
+                              label={statusLabel(item.status)}
+                              icon={
+                                item.status === "uploaded" ? <CheckCircleRoundedIcon /> :
+                                  item.status === "failed" ? <ErrorOutlineRoundedIcon /> :
+                                    <HourglassBottomRoundedIcon />
+                              }
+                            />
+                            <Chip size="small" label={formatFileSize(item.file.size)} />
+                          </Stack>
+
+                          <LinearProgress
+                            variant="determinate"
+                            value={item.status === "queued" ? 5 : item.progress}
+                            color={item.status === "failed" ? "error" : item.status === "uploaded" ? "success" : "primary"}
+                            sx={{ height: 8, borderRadius: 999 }}
+                          />
+
+                          <Typography variant="body2" color="text.secondary">
+                            {item.message ?? (item.status === "queued" ? "Готов к отправке" : "")}
+                          </Typography>
+
+                          {item.uploadedBlankId ? (
+                            <Button
+                              size="small"
+                              variant="text"
+                              onClick={() =>
+                                navigate(
+                                  processingFlow === "guided"
+                                    ? `/scan/blanks/${item.uploadedBlankId}/roi-review`
+                                    : `/scan/blanks/${item.uploadedBlankId}`
+                                )
+                              }
+                            >
+                              {processingFlow === "guided" ? "Открыть проверку полей" : "Открыть бланк"}
+                            </Button>
+                          ) : null}
+                        </Stack>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <Button
+                  variant="contained"
+                  disabled={isDemoMode || !testQuery.data || queueItems.length === 0 || uploadMutation.isPending || startSessionMutation.isPending}
+                  onClick={() => uploadMutation.mutate()}
+                >
+                  {uploadMutation.isPending
+                    ? processingFlow === "guided"
+                      ? "Готовим предварительную разметку..."
+                      : "Отправляем очередь..."
+                    : queueItems.length > 1
+                      ? processingFlow === "guided"
+                        ? `Загрузить ${queueItems.length} бланков и проверить поля`
+                        : `Сразу распознать ${queueItems.length} бланков`
+                      : processingFlow === "guided"
+                        ? "Проверить поля перед распознаванием"
+                        : "Сразу распознать бланк"}
+                </Button>
+                <Button
+                  variant="outlined"
+                  disabled={queueItems.length === 0 || uploadMutation.isPending}
+                  onClick={() => clearQueue([...queueItems])}
+                >
+                  Очистить очередь
+                </Button>
+              </Stack>
+            </Stack>
+          </SectionCard>
         </Stack>
       </SectionCard>
     </Stack>

@@ -1,0 +1,9 @@
+{
+  "roi_name": "corr7_answer",
+  "is_empty": false,
+  "ink_ratio": 0.019759060436513938,
+  "num_components": 23,
+  "meaningful_components": 6,
+  "total_area": 392,
+  "max_area": 62
+}

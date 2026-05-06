@@ -1,234 +1,43 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Age Scanner</title>
+    <title>Добро пожаловать</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f7fa;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 20px auto;
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 32px;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            font-size: 14px;
-            opacity: 0.95;
-        }
-
-        .content {
-            padding: 40px 30px;
-        }
-
-        .welcome-badge {
-            text-align: center;
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-
-        .greeting {
-            font-size: 18px;
-            color: #333;
-            margin-bottom: 25px;
-            font-weight: 500;
-            text-align: center;
-        }
-
-        .greeting strong {
-            color: #667eea;
-        }
-
-        .message {
-            font-size: 14px;
-            color: #555;
-            line-height: 1.8;
-            margin-bottom: 25px;
-        }
-
-        .features {
-            background-color: #f9f9f9;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 25px 0;
-        }
-
-        .features h3 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 16px;
-        }
-
-        .features ul {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        .features li {
-            padding-left: 25px;
-            position: relative;
-            margin-bottom: 10px;
-            font-size: 13px;
-            color: #666;
-        }
-
-        .features li:before {
-            content: "★";
-            position: absolute;
-            left: 0;
-            color: #667eea;
-        }
-
-        .cta-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 30px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 14px;
-            margin-top: 15px;
-        }
-
-        .next-steps {
-            background-color: #e7f3ff;
-            border-left: 4px solid #667eea;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 25px 0;
-            font-size: 13px;
-            color: #004085;
-        }
-
-        .next-steps strong {
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .footer {
-            background-color: #f9f9f9;
-            padding: 25px 30px;
-            text-align: center;
-            border-top: 1px solid #eee;
-            font-size: 12px;
-            color: #999;
-        }
-
-        .footer p {
-            margin: 5px 0;
-        }
-
-        @media only screen and (max-width: 600px) {
-            .container {
-                margin: 10px;
-            }
-
-            .header {
-                padding: 30px 20px;
-            }
-
-            .header h1 {
-                font-size: 28px;
-            }
-
-            .content {
-                padding: 25px 20px;
-            }
-        }
+        body { margin: 0; padding: 0; background: #f6f2ea; font-family: "Segoe UI", Arial, sans-serif; color: #1f2933; }
+        .wrapper { max-width: 620px; margin: 24px auto; background: #fff; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 28px rgba(31,78,95,0.12); }
+        .header { background: linear-gradient(135deg, #1f4e5f, #3c7d73); color: #fff; padding: 36px 28px; }
+        .content { padding: 32px 28px; line-height: 1.7; font-size: 15px; }
+        .feature-box { background: #f8fafb; border-radius: 12px; padding: 18px; margin: 20px 0; }
+        .feature-box ul { margin: 10px 0 0; padding-left: 18px; }
+        .button { display: inline-block; background: #c86b3c; color: #fff !important; text-decoration: none; padding: 14px 26px; border-radius: 10px; font-weight: 700; }
+        .footer { padding: 20px 28px 28px; color: #6b7280; font-size: 13px; text-align: center; border-top: 1px solid #eef2f4; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>🎉 Welcome to Age Scanner!</h1>
-            <p>Your account has been created successfully</p>
-        </div>
-
-        <!-- Content -->
-        <div class="content">
-            <!-- Welcome Badge -->
-            <div class="welcome-badge">
-                👋
-            </div>
-
-            <!-- Greeting -->
-            <div class="greeting">
-                Welcome, <strong th:text="${fullName}">User</strong>!
-            </div>
-
-            <!-- Message -->
-            <div class="message">
-                <p>Thank you for registering with Age Scanner! We're excited to have you on board.
-                   Your account is now active and ready to use.</p>
-                <p style="margin-top: 15px;">Age Scanner is a modern platform designed to help teachers efficiently manage and evaluate student assessments through advanced scanning and analysis technology.</p>
-            </div>
-
-            <!-- Features -->
-            <div class="features">
-                <h3>What you can do:</h3>
-                <ul>
-                    <li>Scan and digitize student answer sheets instantly</li>
-                    <li>Automatic evaluation and grading of assessments</li>
-                    <li>Generate comprehensive statistics and reports</li>
-                    <li>Manage multiple classes and students efficiently</li>
-                    <li>Track student progress over time</li>
-                </ul>
-            </div>
-
-            <!-- Next Steps -->
-            <div class="next-steps">
-                <strong>Getting Started:</strong>
-                <p>Log in to your account and explore the dashboard. You can start by creating your first test or uploading answer sheets for scanning.</p>
-            </div>
-
-            <!-- CTA -->
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="http://localhost:3000/login" class="cta-button">Log In Now</a>
-            </div>
-
-            <!-- Message -->
-            <div class="message">
-                <p>If you have any questions or need assistance, please don't hesitate to contact our support team at
-                   <strong>support@agescanner.com</strong></p>
-                <p style="margin-top: 15px;">Best regards,<br><strong>Age Scanner Team</strong></p>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            <p>&copy; 2024 Age Scanner. All rights reserved.</p>
-            <p>This is an automated email. Please do not reply directly to this message.</p>
-        </div>
+<div class="wrapper">
+    <div class="header">
+        <h1>Добро пожаловать в СканПроверка</h1>
+        <p>Ваш аккаунт готов к работе</p>
     </div>
+    <div class="content">
+        <p>Здравствуйте, <strong th:text="${fullName} ?: 'пользователь'">пользователь</strong>.</p>
+        <p>Спасибо, что выбрали <strong>СканПроверка</strong>. Теперь вы можете создавать тесты, загружать бланки, проверять ответы и смотреть статистику по результатам.</p>
+        <div class="feature-box">
+            <strong>Что можно сделать сразу:</strong>
+            <ul>
+                <li>создать первый тест и задать ключи ответов;</li>
+                <li>загрузить бланки с телефона или компьютера;</li>
+                <li>посмотреть, как система распознала ответы;</li>
+                <li>открыть статистику по каждому тесту.</li>
+            </ul>
+        </div>
+        <p style="text-align:center; margin-top: 28px;">
+            <a class="button" th:href="${loginLink}">Перейти в приложение</a>
+        </p>
+    </div>
+    <div class="footer">Это автоматическое письмо от СканПроверка.</div>
+</div>
 </body>
 </html>
-

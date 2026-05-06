@@ -4,16 +4,25 @@ import com.Ghallab.dev.Test_Scanner_backend.common.Response.Response;
 import com.Ghallab.dev.Test_Scanner_backend.scan.domain.service.ScanService;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScannedBlankDetailedResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScannedBlankResponse;
+import com.Ghallab.dev.Test_Scanner_backend.scan.dto.RoiMetaResponse;
+import com.Ghallab.dev.Test_Scanner_backend.scan.dto.RoiBoxResponse;
+import com.Ghallab.dev.Test_Scanner_backend.scan.dto.RoiOverridesRequest;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.ScanSessionResponse;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.StartScanSessionRequest;
 import com.Ghallab.dev.Test_Scanner_backend.scan.dto.UploadScannedBlankRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -84,6 +93,17 @@ public class ScanController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping(value = "/submit-blank-preview", consumes = {"multipart/form-data"})
+    public ResponseEntity<Response<ScannedBlankResponse>> submitScannedBlankForPreview(
+            @Valid @ModelAttribute UploadScannedBlankRequest request) {
+        MultipartFile image = request.getImage();
+        log.info("Uploading scanned blank image for ROI preview, test: {}, file: {}",
+                request.getTestId(),
+                image != null ? image.getOriginalFilename() : "<missing>");
+        Response<ScannedBlankResponse> response = scanService.submitScannedBlankForPreview(request);
+        return ResponseEntity.ok(response);
+    }
+
     /**
      * Get all scanned blanks for a specific test
      * GET /api/scan/test/{testId}/blanks
@@ -117,6 +137,55 @@ public class ScanController {
             @PathVariable UUID blankId) {
         log.info("Fetching scanned blank: {}", blankId);
         Response<ScannedBlankResponse> response = scanService.getScannedBlankById(blankId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/blank/{blankId}/asset/{kind}")
+    public ResponseEntity<Resource> getScannedBlankAsset(
+            @PathVariable UUID blankId,
+            @PathVariable String kind) {
+        log.info("Fetching scanned blank asset: {} / {}", blankId, kind);
+
+        Path path = scanService.resolveBlankAssetPath(blankId, kind);
+        if (path == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource resource = new FileSystemResource(path);
+        MediaType mediaType = MediaTypeFactory.getMediaType(path.getFileName().toString())
+                .orElse(MediaType.APPLICATION_OCTET_STREAM);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+                .contentType(mediaType)
+                .body(resource);
+    }
+
+    @GetMapping("/blank/{blankId}/roi-metadata")
+    public ResponseEntity<Response<List<RoiMetaResponse>>> getBlankRoiMetadata(
+            @PathVariable UUID blankId) {
+        log.info("Fetching ROI metadata for blank: {}", blankId);
+        Response<List<RoiMetaResponse>> response = scanService.getBlankRoiMetadata(blankId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/blank/{blankId}/roi-overrides")
+    public ResponseEntity<Response<Map<String, RoiBoxResponse>>> getBlankRoiOverrides(
+            @PathVariable UUID blankId) {
+        log.info("Fetching ROI overrides for blank: {}", blankId);
+        Response<Map<String, RoiBoxResponse>> response = scanService.getBlankRoiOverrides(blankId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/blank/{blankId}/roi-overrides")
+    public ResponseEntity<Response<Map<String, RoiBoxResponse>>> saveBlankRoiOverrides(
+            @PathVariable UUID blankId,
+            @RequestBody(required = false) RoiOverridesRequest request) {
+        log.info("Saving ROI overrides for blank: {}", blankId);
+        Response<Map<String, RoiBoxResponse>> response = scanService.saveBlankRoiOverrides(
+                blankId,
+                request != null ? request.getOverrides() : null
+        );
         return ResponseEntity.ok(response);
     }
 
@@ -186,6 +255,14 @@ public class ScanController {
             @PathVariable UUID blankId) {
         log.info("Retrying OCR for blank: {}", blankId);
         Response<ScannedBlankResponse> response = scanService.retryOcr(blankId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/blank/{blankId}/refresh-preview")
+    public ResponseEntity<Response<ScannedBlankResponse>> refreshPreview(
+            @PathVariable UUID blankId) {
+        log.info("Refreshing ROI preview for blank: {}", blankId);
+        Response<ScannedBlankResponse> response = scanService.refreshPreview(blankId);
         return ResponseEntity.ok(response);
     }
 }

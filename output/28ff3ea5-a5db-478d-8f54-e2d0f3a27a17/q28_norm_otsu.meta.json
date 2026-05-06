@@ -1,0 +1,9 @@
+{
+  "roi_name": "q28",
+  "is_empty": false,
+  "ink_ratio": 0.04910988336402701,
+  "num_components": 10,
+  "meaningful_components": 10,
+  "total_area": 1440,
+  "max_area": 196
+}

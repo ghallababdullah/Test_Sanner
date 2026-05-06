@@ -57,6 +57,8 @@ public class ScannedBlankDetailedResponse {
 
     private String reviewNotes;
 
+    private Map<String, OcrAnswerAssessmentResponse> answerAssessments;
+
     private List<StudentAnswerResponse> answerGrades;
 
     private String originalImagePath;

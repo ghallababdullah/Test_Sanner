@@ -1,0 +1,9 @@
+{
+  "roi_name": "q22",
+  "is_empty": false,
+  "ink_ratio": 0.016001986942946352,
+  "num_components": 3,
+  "meaningful_components": 3,
+  "total_area": 450,
+  "max_area": 157
+}
