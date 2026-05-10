@@ -1,11 +1,13 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AxiosError } from "axios";
 import { Alert, Box, Button, Stack, TextField } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthShell } from "./AuthShell";
 import { loginRequest } from "../api";
 import { useAuth } from "../AuthContext";
+import type { ApiResponse } from "../../../shared/types/api";
 
 const schema = z.object({
   email: z.string().email("Введите корректный email"),
@@ -29,7 +31,32 @@ export function LoginPage() {
       const data = await loginRequest(values);
       login(data);
       navigate("/tests");
-    } catch {
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        const responseMessage = (error.response?.data as ApiResponse<unknown> | undefined)?.message;
+        const status = error.response?.status;
+
+        if (!error.response) {
+          setError("root", {
+            message: "Нет связи с сервером. Проверьте, что страница открыта по HTTPS, а бэкенд запущен и доступен по сети."
+          });
+          return;
+        }
+
+        if (status === 400 || status === 401 || status === 404) {
+          setError("root", { message: responseMessage || "Неверный email или пароль." });
+          return;
+        }
+
+        if (status === 502 || status === 503 || status === 504) {
+          setError("root", { message: "Фронтенд не может достучаться до бэкенда. Проверьте, что Spring Boot запущен на порту 8080." });
+          return;
+        }
+
+        setError("root", { message: responseMessage || `Ошибка входа. Код ответа: ${status}.` });
+        return;
+      }
+
       setError("root", { message: "Не удалось войти. Проверьте email и пароль." });
     }
   });

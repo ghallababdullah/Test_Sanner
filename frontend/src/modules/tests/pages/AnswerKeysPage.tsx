@@ -1,38 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  FormControl,
-  Grid,
-  InputLabel,
-  MenuItem,
-  Select,
-  Stack,
-  TextField,
-  Typography
-} from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Grid, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import { createAnswerKeys, fetchAnswerKeys, fetchTestDetails, updateAnswerKey } from "../api";
 import { SectionCard } from "../../../shared/components/SectionCard";
 import type { AnswerKeyResponse, CreateAnswerKeyRequest } from "../../../shared/types/tests";
 
-type AnswerType = "TEXT" | "MULTIPLE_CHOICE" | "NUMERIC";
-
 interface AnswerKeyRow {
   id?: string;
   questionNumber: number;
   correctAnswer: string;
-  maxPoints: number;
-  toleranceLevel: number;
-  answerType: AnswerType;
 }
 
-function defaultAnswerType(questionNumber: number): AnswerType {
-  const numericQuestions = new Set([2, 3, 9, 14, 17, 22, 27, 31]);
-  return numericQuestions.has(questionNumber) ? "NUMERIC" : "TEXT";
+function normalizeAnswer(value: string) {
+  return value.replace(/\s+$/u, "");
 }
 
 function buildRows(totalQuestions: number, keys: AnswerKeyResponse[]): AnswerKeyRow[] {
@@ -43,10 +24,7 @@ function buildRows(totalQuestions: number, keys: AnswerKeyResponse[]): AnswerKey
     return {
       id: existing?.id,
       questionNumber,
-      correctAnswer: existing?.correctAnswer ?? "",
-      maxPoints: existing?.maxPoints ?? 1,
-      toleranceLevel: existing?.toleranceLevel ?? 0,
-      answerType: existing?.answerType ?? defaultAnswerType(questionNumber)
+      correctAnswer: existing?.correctAnswer ?? ""
     };
   });
 }
@@ -74,9 +52,7 @@ export function AnswerKeysPage() {
   const existingKeys = answerKeysQuery.data ?? [];
 
   useEffect(() => {
-    if (!totalQuestions) {
-      return;
-    }
+    if (!totalQuestions) return;
     setRows(buildRows(totalQuestions, existingKeys));
   }, [existingKeys, totalQuestions]);
 
@@ -88,12 +64,7 @@ export function AnswerKeysPage() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const normalizedRows = rows
-        .map((row) => ({
-          ...row,
-          correctAnswer: row.correctAnswer.trim(),
-          maxPoints: Number(row.maxPoints) || 1,
-          toleranceLevel: Number(row.toleranceLevel) || 0
-        }))
+        .map((row) => ({ ...row, correctAnswer: normalizeAnswer(row.correctAnswer) }))
         .filter((row) => row.correctAnswer.length > 0);
 
       const existingRows = normalizedRows.filter((row) => row.id);
@@ -103,8 +74,8 @@ export function AnswerKeysPage() {
         existingRows.map((row) =>
           updateAnswerKey(testId, row.id!, {
             correctAnswer: row.correctAnswer,
-            maxPoints: row.maxPoints,
-            toleranceLevel: row.toleranceLevel
+            maxPoints: 1,
+            toleranceLevel: 1
           })
         )
       );
@@ -113,26 +84,25 @@ export function AnswerKeysPage() {
         const payload: CreateAnswerKeyRequest[] = newRows.map((row) => ({
           questionNumber: row.questionNumber,
           correctAnswer: row.correctAnswer,
-          maxPoints: row.maxPoints,
-          toleranceLevel: row.toleranceLevel,
-          answerType: row.answerType
+          maxPoints: 1,
+          toleranceLevel: 1,
+          answerType: "TEXT"
         }));
         await createAnswerKeys(testId, payload);
       }
     },
     onSuccess: () => {
-      setSaveError(null);
-      setSaveSuccess("Ключи ответов сохранены.");
+      navigate(`/tests/${testId}`);
     },
     onError: () => {
       setSaveSuccess(null);
-      setSaveError("Не удалось сохранить ключи ответов. Проверьте заполнение полей и попробуйте ещё раз.");
+      setSaveError("Не удалось сохранить правильные ответы. Проверьте поля и повторите попытку.");
     }
   });
 
-  const updateRow = <K extends keyof AnswerKeyRow>(questionNumber: number, field: K, value: AnswerKeyRow[K]) => {
+  const updateRow = (questionNumber: number, value: string) => {
     setRows((current) =>
-      current.map((row) => (row.questionNumber === questionNumber ? { ...row, [field]: value } : row))
+      current.map((row) => (row.questionNumber === questionNumber ? { ...row, correctAnswer: value } : row))
     );
   };
 
@@ -140,7 +110,7 @@ export function AnswerKeysPage() {
     return (
       <Stack spacing={2} alignItems="center" sx={{ py: 8 }}>
         <CircularProgress />
-        <Typography color="text.secondary">Загрузка ключей ответов...</Typography>
+        <Typography color="text.secondary">Загрузка правильных ответов...</Typography>
       </Stack>
     );
   }
@@ -148,9 +118,10 @@ export function AnswerKeysPage() {
   return (
     <Stack spacing={3}>
       <Box>
-        <Typography variant="h4">Ключи ответов</Typography>
+        <Typography variant="h4">Правильные ответы</Typography>
         <Typography color="text.secondary">
-          Заполните правильные ответы для каждого вопроса. На телефоне удобнее двигаться по карточкам сверху вниз.
+          Для каждого вопроса укажите только правильный текст ответа. Система будет проверять точное совпадение,
+          без допусков и частичных совпадений.
         </Typography>
       </Box>
 
@@ -160,25 +131,18 @@ export function AnswerKeysPage() {
             <Stack spacing={1.5}>
               <Typography>Тест: {detailsQuery.data?.title}</Typography>
               <Typography>Вопросов: {totalQuestions}</Typography>
-              <Typography>Заполнено: {completionStats.filled} из {completionStats.total}</Typography>
-              <Typography color="text.secondary">
-                Для существующих ключей можно обновлять ответ, баллы и допуск. Тип ответа пока фиксируется при первом создании.
+              <Typography>
+                Заполнено: {completionStats.filled} из {completionStats.total}
               </Typography>
             </Stack>
           </SectionCard>
         </Grid>
         <Grid size={{ xs: 12, md: 8 }}>
-          <SectionCard title="Подсказки">
-            <Stack spacing={1.5}>
-              <Typography color="text.secondary">
-                Для текстовых ответов вводите слово или фразу без лишних комментариев.
-              </Typography>
-              <Typography color="text.secondary">
-                Для числовых ответов можно использовать цифры и запятые, как в бланке.
-              </Typography>
-              <Typography color="text.secondary">
-                Если у задания один балл, оставьте значение по умолчанию. Допуск нужен только там, где он действительно используется.
-              </Typography>
+          <SectionCard title="Важно">
+            <Stack spacing={1}>
+              <Typography color="text.secondary">Тип ответа всегда используется как текст.</Typography>
+              <Typography color="text.secondary">Ответ считается правильным только при точном совпадении.</Typography>
+              <Typography color="text.secondary">Баллы за отдельные вопросы здесь не задаются.</Typography>
             </Stack>
           </SectionCard>
         </Grid>
@@ -192,54 +156,15 @@ export function AnswerKeysPage() {
           <SectionCard
             key={row.questionNumber}
             title={`Вопрос ${row.questionNumber}`}
-            subtitle={row.id ? "Ключ уже существует и будет обновлён." : "Новый ключ будет создан при сохранении."}
+            subtitle={row.id ? "Ответ будет обновлён." : "Ответ будет создан при сохранении."}
           >
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Правильный ответ"
-                  value={row.correctAnswer}
-                  onChange={(event) => updateRow(row.questionNumber, "correctAnswer", event.target.value)}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Баллы"
-                  value={row.maxPoints}
-                  onChange={(event) => updateRow(row.questionNumber, "maxPoints", Number(event.target.value))}
-                  inputProps={{ min: 1, step: 1 }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Допуск"
-                  value={row.toleranceLevel}
-                  onChange={(event) => updateRow(row.questionNumber, "toleranceLevel", Number(event.target.value))}
-                  inputProps={{ min: 0, step: 1 }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 2 }}>
-                <FormControl fullWidth>
-                  <InputLabel id={`answer-type-${row.questionNumber}`}>Тип</InputLabel>
-                  <Select
-                    labelId={`answer-type-${row.questionNumber}`}
-                    label="Тип"
-                    value={row.answerType}
-                    disabled={Boolean(row.id)}
-                    onChange={(event) => updateRow(row.questionNumber, "answerType", event.target.value as AnswerType)}
-                  >
-                    <MenuItem value="TEXT">Текст</MenuItem>
-                    <MenuItem value="NUMERIC">Число</MenuItem>
-                    <MenuItem value="MULTIPLE_CHOICE">Выбор</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
+            <TextField
+              fullWidth
+              label="Правильный ответ"
+              value={row.correctAnswer}
+              onChange={(event) => updateRow(row.questionNumber, event.target.value)}
+              onBlur={(event) => updateRow(row.questionNumber, normalizeAnswer(event.target.value))}
+            />
           </SectionCard>
         ))}
       </Stack>
@@ -255,10 +180,10 @@ export function AnswerKeysPage() {
             saveMutation.mutate();
           }}
         >
-          {saveMutation.isPending ? "Сохраняем..." : "Сохранить ключи"}
+          {saveMutation.isPending ? "Сохраняем..." : "Сохранить ответы"}
         </Button>
         <Button variant="outlined" size="large" onClick={() => navigate(`/tests/${testId}/grade-thresholds`)}>
-          Перейти к порогам оценок
+          Перейти к критериям оценки
         </Button>
         <Button variant="text" size="large" onClick={() => navigate(`/tests/${testId}`)}>
           Вернуться к тесту

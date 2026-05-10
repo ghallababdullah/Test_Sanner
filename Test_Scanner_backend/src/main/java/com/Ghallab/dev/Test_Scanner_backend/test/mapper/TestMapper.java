@@ -25,6 +25,10 @@ public class TestMapper {
         this.modelMapper = modelMapper;
     }
 
+    private String normalizeAnswer(String value) {
+        return value == null ? null : value.replaceFirst("\\s+$", "");
+    }
+
     // ==================== TEST MAPPER ====================
 
     /**
@@ -62,8 +66,17 @@ public class TestMapper {
         if (request.getSubject() != null) {
             test.setSubject(request.getSubject());
         }
+        if (request.getClassLevel() != null) {
+            test.setClassLevel(request.getClassLevel());
+        }
         if (request.getDescription() != null) {
             test.setDescription(request.getDescription());
+        }
+        if (request.getTotalQuestions() != null) {
+            test.setTotalQuestions(request.getTotalQuestions());
+        }
+        if (request.getMaxScore() != null) {
+            test.setMaxScore(request.getMaxScore());
         }
         if (request.getIsActive() != null) {
             test.setIsActive(request.getIsActive());
@@ -130,6 +143,7 @@ public class TestMapper {
     public AnswerKey toAnswerKeyEntity(CreateAnswerKeyRequest request, Test test) {
         AnswerKey answerKey = modelMapper.map(request, AnswerKey.class);
         answerKey.setTest(test);
+        answerKey.setCorrectAnswer(normalizeAnswer(answerKey.getCorrectAnswer()));
 
 //        // ✅ Явно установить версию (ModelMapper её пропускает)
 //        answerKey.setVersion(0L);
@@ -156,7 +170,7 @@ public class TestMapper {
      */
     public void updateAnswerKeyFromRequest(UpdateAnswerKeyRequest request, AnswerKey answerKey) {
         if (request.getCorrectAnswer() != null) {
-            answerKey.setCorrectAnswer(request.getCorrectAnswer());
+            answerKey.setCorrectAnswer(normalizeAnswer(request.getCorrectAnswer()));
         }
         if (request.getMaxPoints() != null) {
             answerKey.setMaxPoints(request.getMaxPoints());

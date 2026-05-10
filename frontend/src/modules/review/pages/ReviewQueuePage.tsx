@@ -5,6 +5,8 @@ import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { useNavigate, useParams } from "react-router-dom";
 import { deleteBlank, fetchTestBlanks } from "../api";
 import { SectionCard } from "../../../shared/components/SectionCard";
+import { explainScanError } from "../scanErrorMessages";
+import { formatProcessingStatus, formatReviewStatus } from "../statusLabels";
 
 function formatDateTime(value?: string) {
   if (!value) {
@@ -59,7 +61,9 @@ export function ReviewQueuePage() {
           </Stack>
         ) : (
           <Stack spacing={2}>
-            {blanksQuery.data?.map((blank) => (
+            {blanksQuery.data?.map((blank) => {
+              const scanError = explainScanError(blank.processingError);
+              return (
               <Box
                 key={blank.id}
                 sx={{
@@ -88,13 +92,21 @@ export function ReviewQueuePage() {
                       ) : (
                         <Chip label="Автопроверка" color="success" />
                       )}
-                      <Chip label={`OCR: ${blank.processingStatus}`} variant="outlined" />
+                      <Chip label={formatProcessingStatus(blank.processingStatus)} variant="outlined" />
                     </Stack>
                   </Stack>
 
                   <Typography variant="body2" color="text.secondary">
-                    Проверка: {blank.reviewStatus} • Оценка: {blank.grade ?? "—"} • Процент: {blank.percentage ?? "—"}%
+                    Проверка: {formatReviewStatus(blank.reviewStatus)} • Оценка: {blank.grade ?? "—"} • Процент: {blank.percentage ?? "—"}%
                   </Typography>
+
+                  {scanError ? (
+                    <Alert severity="error">
+                      <strong>{scanError.title}</strong>
+                      <br />
+                      {scanError.details}
+                    </Alert>
+                  ) : null}
 
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                     <Button
@@ -114,7 +126,8 @@ export function ReviewQueuePage() {
                   </Stack>
                 </Stack>
               </Box>
-            )) ?? <Typography>Нет данных</Typography>}
+              );
+            }) ?? <Typography>Нет данных</Typography>}
           </Stack>
         )}
       </SectionCard>

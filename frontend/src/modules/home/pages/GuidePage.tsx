@@ -6,6 +6,7 @@ import scanAnimationHtml from "../../../resources/scan_3d_real_blank_hands_only.
 import blankTemplateImage from "../../../resources/шаблон бланка (1) (1).jpg";
 import { useAuth } from "../../auth/AuthContext";
 import { PublicHeader } from "../components/PublicHeader";
+import { SiteFooter } from "../../site/components/SiteFooter";
 
 const processSteps = [
   "Скачайте и распечатайте шаблон бланка.",
@@ -35,17 +36,17 @@ export function GuidePage() {
   const animationHtml = scanAnimationHtml.replace(/__BLANK_IMAGE_URL__/g, blankTemplateImage);
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", display: "flex", flexDirection: "column" }}>
       <PublicHeader />
 
-      <Container maxWidth="lg" sx={{ py: { xs: 3, md: 6 } }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 3, md: 6 }, flex: 1 }}>
         <Stack spacing={{ xs: 3, md: 4 }}>
           <Stack spacing={1.5} sx={{ maxWidth: 760 }}>
             <Typography variant="h2" sx={{ fontSize: { xs: 30, sm: 38, md: 48 }, lineHeight: 1.08 }}>
               Как подготовить бланк и сделать хороший снимок
             </Typography>
             <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
-              Ниже короткая инструкция для преподавателя и учеников. Анимацию мы оставили как наглядный пример
+              Ниже короткая инструкция для учителя и учеников. Анимацию мы оставили как наглядный пример
               процесса.
             </Typography>
           </Stack>
@@ -147,6 +148,7 @@ export function GuidePage() {
           </Card>
         </Stack>
       </Container>
+      <SiteFooter />
     </Box>
   );
 }

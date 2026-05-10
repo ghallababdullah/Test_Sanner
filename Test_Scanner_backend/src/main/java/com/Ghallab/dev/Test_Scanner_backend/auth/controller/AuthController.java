@@ -1,6 +1,7 @@
 package com.Ghallab.dev.Test_Scanner_backend.auth.controller;
 
 import com.Ghallab.dev.Test_Scanner_backend.auth.domain.service.AuthService;
+import com.Ghallab.dev.Test_Scanner_backend.auth.dto.ChangePasswordRequest;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.LoginRequest;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.LoginResponse;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.RegistrationRequest;
@@ -87,6 +88,13 @@ public class AuthController {
     ) {
         log.info("Reset password endpoint called");
         Response<String> response = authService.resetPassword(token, resetPasswordRequest);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Response<String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        log.info("Change password endpoint called");
+        Response<String> response = authService.changePassword(request);
         return ResponseEntity.ok(response);
     }
 }

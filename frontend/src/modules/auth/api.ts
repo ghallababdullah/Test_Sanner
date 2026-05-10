@@ -9,7 +9,7 @@ export async function loginRequest(payload: LoginRequest) {
 
 export async function registerRequest(payload: RegisterRequest) {
   const { data } = await http.post<ApiResponse<string>>("/auth/register", payload);
-  return data.data;
+  return data;
 }
 
 export async function forgotPasswordRequest(email: string) {
@@ -23,5 +23,14 @@ export async function resetPasswordRequest(token: string, password: string, conf
     { password, confirmPassword },
     { params: { token } }
   );
+  return data.data;
+}
+
+export async function changePasswordRequest(payload: {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  const { data } = await http.post<ApiResponse<string>>("/auth/change-password", payload);
   return data.data;
 }

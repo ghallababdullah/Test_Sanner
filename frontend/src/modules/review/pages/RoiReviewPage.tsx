@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Alert,
   Box,
@@ -12,15 +12,13 @@ import {
 } from "@mui/material";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
-import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import { useNavigate, useParams } from "react-router-dom";
 import { SectionCard } from "../../../shared/components/SectionCard";
 import {
   fetchBlankAsset,
   fetchBlankDetails,
   fetchBlankRoiMetadata,
-  fetchBlankRoiOverrides,
-  retryBlankOcr
+  fetchBlankRoiOverrides
 } from "../api";
 import { fetchTestDetails } from "../../tests/api";
 import { DEFAULT_ROI_DEFINITIONS, ROI_CANVAS_HEIGHT, ROI_CANVAS_WIDTH } from "../roiDefinitions";
@@ -61,8 +59,8 @@ function scoreRoiRisk(item: {
   return "low";
 }
 
-function needsOcrStart(processingStatus?: string) {
-  return processingStatus === "PENDING_OCR" || processingStatus === "PROCESSING";
+function formatRoiLabel(roiName: string) {
+  return roiName.replaceAll("_", " ");
 }
 
 export function RoiReviewPage() {
@@ -137,50 +135,33 @@ export function RoiReviewPage() {
     [sortedMetadata]
   );
 
-  const shouldStartOcr = needsOcrStart(detailsQuery.data?.processingStatus);
-
-  const confirmMutation = useMutation({
-    mutationFn: async () => {
-      if (shouldStartOcr) {
-        return retryBlankOcr(blankId);
-      }
-      return true;
-    },
-    onSuccess: () => navigate(`/scan/blanks/${blankId}`)
-  });
+  if (detailsQuery.isLoading && !detailsQuery.data) {
+    return (
+      <Box sx={{ minHeight: 320, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4">Проверка разметки полей</Typography>
+      <Box sx={{ borderLeft: "6px solid", borderColor: "secondary.main", pl: 2 }}>
+        <Typography variant="h4">Проверка выделения полей</Typography>
         <Typography color="text.secondary">
-          {detailsQuery.data?.studentName ?? "Бланк"}: здесь видны только области, которые реально
-          относятся к текущему тесту — метаданные, нужные вопросы и блок исправлений.
+          {detailsQuery.data?.studentName ?? "Бланк"}: здесь показаны только зоны, которые реально участвуют в текущем тесте.
         </Typography>
       </Box>
 
       <Alert severity="info">
-        Это контрольный шаг перед распознаванием. Если разметка выглядит нормально, можно сразу
-        запустить проверку. Если какая-то область съехала, лучше сначала поправить её вручную.
+        Это контрольный шаг перед распознаванием. Если рамки стоят ровно, подтвердите разметку и вернитесь в карточку бланка,
+        где уже можно будет запустить проверку.
       </Alert>
-
-      {shouldStartOcr ? (
-        <Alert severity="success">
-          Для этого бланка распознавание ещё не запускалось окончательно. После подтверждения разметки
-          начнётся обработка.
-        </Alert>
-      ) : (
-        <Alert severity="warning">
-          Распознавание для этого бланка уже запускалось. Если разметка выглядит неточно, можно перейти в
-          редактор полей, сохранить новые координаты и запустить обработку ещё раз.
-        </Alert>
-      )}
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, lg: 8 }}>
           <SectionCard
             title="Предпросмотр разметки"
-            subtitle="Подсвечиваются только зоны, которые нужны именно этому тесту."
+            subtitle="Подсвечены только те зоны, которые нужны именно этому тесту."
           >
             {(annotatedAssetQuery.isLoading || processedAssetQuery.isLoading) && !reviewPreviewUrl ? (
               <Box sx={{ minHeight: 360, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -192,11 +173,10 @@ export function RoiReviewPage() {
                   position: "relative",
                   width: "100%",
                   aspectRatio: `${ROI_CANVAS_WIDTH} / ${ROI_CANVAS_HEIGHT}`,
-                  borderRadius: 3,
                   overflow: "hidden",
                   border: "1px solid",
                   borderColor: "divider",
-                  bgcolor: "background.default"
+                  bgcolor: "#fffdf8"
                 }}
               >
                 <Box
@@ -219,8 +199,8 @@ export function RoiReviewPage() {
                       top: `${(box.y1 / ROI_CANVAS_HEIGHT) * 100}%`,
                       width: `${((box.x2 - box.x1) / ROI_CANVAS_WIDTH) * 100}%`,
                       height: `${((box.y2 - box.y1) / ROI_CANVAS_HEIGHT) * 100}%`,
-                      border: "2px solid rgba(25,118,210,0.85)",
-                      bgcolor: "rgba(25,118,210,0.08)",
+                      border: "2px solid rgba(23,50,77,0.92)",
+                      bgcolor: "rgba(23,50,77,0.08)",
                       boxSizing: "border-box"
                     }}
                   >
@@ -228,51 +208,43 @@ export function RoiReviewPage() {
                       sx={{
                         position: "absolute",
                         left: 0,
-                        top: -22,
+                        top: -24,
                         px: 0.75,
                         py: 0.25,
-                        borderRadius: 1,
-                        bgcolor: "rgba(25,118,210,0.92)",
-                        color: "#fff",
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
                         fontSize: 12,
                         fontWeight: 700
                       }}
                     >
-                      {roiName}
+                      {formatRoiLabel(roiName)}
                     </Box>
                   </Box>
                 ))}
               </Box>
             ) : (
-              <Alert severity="warning">
-                Для этого бланка пока нет изображения предпросмотра разметки.
-              </Alert>
+              <Alert severity="warning">Для этого бланка пока нет изображения предпросмотра разметки.</Alert>
             )}
           </SectionCard>
         </Grid>
 
         <Grid size={{ xs: 12, lg: 4 }}>
-          <SectionCard title="Решение по разметке">
+          <SectionCard title="Что делать дальше">
             <Stack spacing={2}>
               <Chip
                 color={riskyCount > 0 ? "warning" : "success"}
-                label={
-                  riskyCount > 0
-                    ? `Есть сомнительные зоны: ${riskyCount}`
-                    : "Разметка выглядит стабильной"
-                }
+                label={riskyCount > 0 ? `Есть сомнительные зоны: ${riskyCount}` : "Разметка выглядит стабильной"}
               />
               <Typography variant="body2" color="text.secondary">
-                Если один из прямоугольников лёг неровно, лучше исправить его до запуска проверки. Если всё
-                хорошо, можно запускать распознавание.
+                Если какой-то прямоугольник смещён, лучше исправить его сейчас. Если всё выглядит нормально, подтвердите
+                разметку и вернитесь к карточке бланка.
               </Typography>
               <Button
                 variant="contained"
                 startIcon={<CheckCircleRoundedIcon />}
-                onClick={() => confirmMutation.mutate()}
-                disabled={confirmMutation.isPending}
+                onClick={() => navigate(`/scan/blanks/${blankId}`)}
               >
-                {shouldStartOcr ? "Разметка верна, запустить распознавание" : "Разметка верна"}
+                Поля выделены верно
               </Button>
               <Button
                 variant="outlined"
@@ -281,22 +253,12 @@ export function RoiReviewPage() {
               >
                 Исправить области
               </Button>
-              <Button
-                variant="text"
-                startIcon={<AutorenewRoundedIcon />}
-                onClick={() => navigate(`/scan/blanks/${blankId}`)}
-              >
-                Вернуться к бланку
-              </Button>
             </Stack>
           </SectionCard>
         </Grid>
       </Grid>
 
-      <SectionCard
-        title="Список полей"
-        subtitle="Ниже показаны только области, которые реально участвуют в этом тесте."
-      >
+      <SectionCard title="Список полей" subtitle="Ниже показаны только области, которые реально участвуют в этом тесте.">
         <Grid container spacing={2}>
           {sortedMetadata.map((item) => {
             const risk = scoreRoiRisk(item);
@@ -305,27 +267,25 @@ export function RoiReviewPage() {
                 <Box
                   sx={{
                     p: 2,
-                    borderRadius: 3,
                     border: "1px solid",
-                    borderColor:
-                      risk === "high" ? "error.light" : risk === "medium" ? "warning.light" : "divider",
+                    borderColor: risk === "high" ? "error.main" : risk === "medium" ? "warning.main" : "divider",
                     bgcolor: "background.paper"
                   }}
                 >
                   <Stack spacing={1}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography fontWeight={700}>{item.roiName}</Typography>
+                      <Typography fontWeight={700}>{formatRoiLabel(item.roiName)}</Typography>
                       <Chip
                         size="small"
                         color={risk === "high" ? "error" : risk === "medium" ? "warning" : "success"}
-                        label={risk === "high" ? "Риск" : risk === "medium" ? "Проверить" : "Ок"}
+                        label={risk === "high" ? "Риск" : risk === "medium" ? "Проверить" : "Норма"}
                       />
                     </Stack>
-                    <Typography variant="body2">Пусто: {item.empty ? "Да" : "Нет"}</Typography>
-                    <Typography variant="body2">Ink ratio: {item.inkRatio?.toFixed(4) ?? "—"}</Typography>
-                    <Typography variant="body2">Компоненты: {item.numComponents ?? "—"}</Typography>
-                    <Typography variant="body2">Значимые: {item.meaningfulComponents ?? "—"}</Typography>
-                    <Typography variant="body2">Площадь: {item.totalArea ?? "—"}</Typography>
+                    <Typography variant="body2">Пустое поле: {item.empty ? "Да" : "Нет"}</Typography>
+                    <Typography variant="body2">Плотность штрихов: {item.inkRatio?.toFixed(4) ?? "—"}</Typography>
+                    <Typography variant="body2">Всего компонентов: {item.numComponents ?? "—"}</Typography>
+                    <Typography variant="body2">Значимых компонентов: {item.meaningfulComponents ?? "—"}</Typography>
+                    <Typography variant="body2">Площадь выделения: {item.totalArea ?? "—"}</Typography>
                   </Stack>
                 </Box>
               </Grid>

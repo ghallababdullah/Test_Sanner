@@ -140,8 +140,8 @@ export function RoiEditorPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => saveBlankRoiOverrides(blankId, editorBoxes),
-    onSuccess: () => setEditorMessage("ROI-координаты сохранены. Теперь можно обновить preview или отдельно запустить OCR."),
-    onError: () => setEditorMessage("Не удалось сохранить ROI-координаты.")
+    onSuccess: () => setEditorMessage("Координаты полей сохранены. Теперь можно обновить предпросмотр или отдельно запустить проверку."),
+    onError: () => setEditorMessage("Не удалось сохранить координаты полей.")
   });
 
   const saveAndRefreshMutation = useMutation({
@@ -150,7 +150,7 @@ export function RoiEditorPage() {
       return refreshBlankPreview(blankId);
     },
     onSuccess: async () => {
-      setEditorMessage("ROI сохранены, preview пересобран. Старые crops и preview заменены новой версией по обновлённым координатам.");
+      setEditorMessage("Координаты сохранены, предпросмотр обновлён. Старые изображения полей заменены новой версией.");
       await Promise.all([
         processedAssetQuery.refetch(),
         roiOverridesQuery.refetch(),
@@ -158,7 +158,7 @@ export function RoiEditorPage() {
       ]);
       navigate(`/scan/blanks/${blankId}/roi-review`);
     },
-    onError: () => setEditorMessage("Не удалось сохранить ROI и обновить preview.")
+    onError: () => setEditorMessage("Не удалось сохранить координаты и обновить предпросмотр.")
   });
 
   const saveAndRetryMutation = useMutation({
@@ -167,10 +167,10 @@ export function RoiEditorPage() {
       return retryBlankOcr(blankId);
     },
     onSuccess: () => {
-      setEditorMessage("ROI сохранены, OCR повторно запущен. Можно вернуться к бланку и следить за новым статусом.");
+      setEditorMessage("Координаты сохранены, проверка запущена заново. Можно вернуться к бланку и следить за новым статусом.");
       navigate(`/scan/blanks/${blankId}`);
     },
-    onError: () => setEditorMessage("Не удалось сохранить ROI и повторно запустить OCR.")
+    onError: () => setEditorMessage("Не удалось сохранить координаты и заново запустить проверку.")
   });
 
   const beginDrag = (roiName: string, mode: DragMode, event: React.PointerEvent) => {
@@ -259,7 +259,7 @@ export function RoiEditorPage() {
   return (
     <Stack spacing={3}>
       <Box>
-        <Typography variant="h4">Редактор ROI</Typography>
+        <Typography variant="h4">Редактор полей</Typography>
         <Typography color="text.secondary">
           {detailsQuery.data?.studentName ?? "Бланк"}: редактируем только зоны, которые реально участвуют в этом тесте — метаданные, нужные вопросы и блок исправлений.
         </Typography>
@@ -273,7 +273,7 @@ export function RoiEditorPage() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          <SectionCard title="Холст редактирования" subtitle="Показываем только relevant ROI для текущего теста.">
+          <SectionCard title="Поля на бланке" subtitle="Показываем только те поля, которые нужны для этого теста.">
             <Box
               ref={imageContainerRef}
               sx={{
@@ -369,7 +369,7 @@ export function RoiEditorPage() {
         </Grid>
 
         <Grid size={{ xs: 12, lg: 4 }}>
-          <SectionCard title="Параметры области" subtitle="Редактирование только нужных зон теста.">
+          <SectionCard title="Параметры поля" subtitle="Здесь можно вручную поправить выбранную область.">
             <Stack spacing={2}>
               <TextField
                 select
@@ -416,7 +416,7 @@ export function RoiEditorPage() {
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending || saveAndRefreshMutation.isPending || saveAndRetryMutation.isPending}
               >
-                Сохранить ROI
+                Сохранить поля
               </Button>
               <Button
                 variant="outlined"
@@ -424,7 +424,7 @@ export function RoiEditorPage() {
                 onClick={() => saveAndRefreshMutation.mutate()}
                 disabled={saveMutation.isPending || saveAndRefreshMutation.isPending || saveAndRetryMutation.isPending}
               >
-                {saveAndRefreshMutation.isPending ? "Обновляем preview..." : "Сохранить и обновить preview"}
+                {saveAndRefreshMutation.isPending ? "Обновляем предпросмотр..." : "Сохранить и обновить предпросмотр"}
               </Button>
               <Button
                 variant="outlined"
@@ -432,14 +432,14 @@ export function RoiEditorPage() {
                 onClick={() => saveAndRetryMutation.mutate()}
                 disabled={saveMutation.isPending || saveAndRefreshMutation.isPending || saveAndRetryMutation.isPending}
               >
-                {saveAndRetryMutation.isPending ? "Запускаем OCR..." : "Сохранить и повторить OCR"}
+                {saveAndRetryMutation.isPending ? "Запускаем проверку..." : "Сохранить и повторить проверку"}
               </Button>
               <Button
                 variant="text"
                 startIcon={<ArrowBackRoundedIcon />}
                 onClick={() => navigate(`/scan/blanks/${blankId}/roi-review`)}
               >
-                Назад к проверке ROI
+                Назад к проверке полей
               </Button>
               <Button
                 variant="text"

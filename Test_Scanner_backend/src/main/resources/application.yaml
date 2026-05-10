@@ -3,6 +3,8 @@ server:
   address: 0.0.0.0
 
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: Test_Scanner_backend
   servlet:
@@ -35,6 +37,7 @@ spring:
       string: abdullah4u12345abdullah4u12345abdullah4u12345
     expiration:
       time: 86400000
+
   rabbitmq:
     host: ${RABBIT_HOST:localhost}
     port: ${RABBIT_PORT:5672}
@@ -51,21 +54,31 @@ spring:
           multiplier: 2.0
 
   mail:
-    host: ${MAIL_HOST:smtp.mailtrap.io}
-    port: ${MAIL_PORT:587}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:465}
     username: ${MAIL_USERNAME:your_mail_username}
     password: ${MAIL_PASSWORD:your_mail_password}
     properties:
       mail:
         smtp:
           auth: true
-          starttls:
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+          ssl:
             enable: true
+          starttls:
+            enable: false
+            required: false
 
 app:
   mail:
     from: ${APP_MAIL_FROM:no-reply@skanproverka.local}
     name: ${APP_MAIL_NAME:СканПроверка}
+  site:
+    company-name: ${APP_SITE_COMPANY_NAME:СканПроверка}
+    support-email: ${APP_SUPPORT_EMAIL:${MAIL_USERNAME:your_mail_username}}
+    partnership-email: ${APP_PARTNERSHIP_EMAIL:${MAIL_USERNAME:your_mail_username}}
   frontend:
     base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
   backend:

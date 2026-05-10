@@ -3,7 +3,21 @@ import type { ApiResponse } from "../types/api";
 import type { LoginResponse } from "../types/auth";
 import { clearAuthTokens, getAccessToken, getRefreshToken, setAuthTokens } from "./tokenStorage";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+function resolveApiBaseUrl() {
+  if (!rawApiBaseUrl) {
+    return "/api";
+  }
+
+  if (typeof window !== "undefined" && window.location.protocol === "https:" && rawApiBaseUrl.startsWith("http://")) {
+    return "/api";
+  }
+
+  return rawApiBaseUrl;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 export const http = axios.create({
   baseURL: API_BASE_URL

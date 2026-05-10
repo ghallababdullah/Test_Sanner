@@ -18,5 +18,7 @@ public interface AnswerKeyRepository extends JpaRepository<AnswerKey, UUID> {
     List<AnswerKey> findByTestIdOrderByQuestionNumber(UUID testId);
 
     Optional<AnswerKey> findByTestIdAndQuestionNumber(UUID testId, Integer questionNumber);
+
+    void deleteByTestIdAndQuestionNumberGreaterThan(UUID testId, Integer questionNumber);
 }
 

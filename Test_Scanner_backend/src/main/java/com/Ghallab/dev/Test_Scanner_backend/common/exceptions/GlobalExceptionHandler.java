@@ -2,8 +2,6 @@ package com.Ghallab.dev.Test_Scanner_backend.common.exceptions;
 
 
 import com.Ghallab.dev.Test_Scanner_backend.common.Response.Response;
-import org.apache.coyote.BadRequestException;
-import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -22,7 +20,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response , HttpStatus.INTERNAL_SERVER_ERROR)  ;
     }
 
-    @ExceptionHandler(ChangeSetPersister.NotFoundException.class)
+    @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<Response<?>> handleNotFoundException( NotFoundException ex){
         Response<?> response = Response.builder().
                 statusCode(HttpStatus.NOT_FOUND.value())
@@ -40,7 +38,8 @@ public class GlobalExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(response , HttpStatus.BAD_REQUEST)  ;
-    }}
+    }
+}
 
 
 

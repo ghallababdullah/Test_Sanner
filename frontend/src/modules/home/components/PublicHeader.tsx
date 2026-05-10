@@ -13,11 +13,12 @@ import {
   Menu,
   MenuItem,
   Stack,
-  Toolbar,
-  Typography
+  Toolbar
 } from "@mui/material";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import { useAuth } from "../../auth/AuthContext";
+import { SiteContactActions } from "../../site/components/SiteContactActions";
+import { ScanProvVerkaWordmark } from "../../../resources/ScanProvVerkaLogoKit";
 
 const authenticatedNav = [
   { label: "Тесты", path: "/tests" },
@@ -31,6 +32,10 @@ const publicNav = [
   { label: "Главная", path: "/" },
   { label: "Инструкция", path: "/guide" }
 ];
+
+function BrandMark() {
+  return <ScanProvVerkaWordmark compact />;
+}
 
 export function PublicHeader() {
   const navigate = useNavigate();
@@ -46,34 +51,31 @@ export function PublicHeader() {
       <AppBar position="sticky" elevation={0} color="transparent">
         <Toolbar
           sx={{
-            minHeight: { xs: 68, md: 76 },
+            minHeight: { xs: 72, md: 82 },
             justifyContent: "space-between",
             gap: 2,
-            bgcolor: "rgba(255,255,255,0.88)",
+            bgcolor: "rgba(251,248,241,0.92)",
             backdropFilter: "blur(14px)"
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
-            <IconButton sx={{ display: { xs: "inline-flex", md: "none" } }} onClick={() => setMobileDrawerOpen(true)}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minWidth: 0 }}>
+            <IconButton
+              sx={{
+                display: { xs: "inline-flex", md: "none" },
+                border: "1px solid",
+                borderColor: "divider"
+              }}
+              onClick={() => setMobileDrawerOpen(true)}
+            >
               <MenuRoundedIcon />
             </IconButton>
 
-            <Button
-              onClick={() => navigate("/")}
-              sx={{
-                p: 0,
-                minWidth: 0,
-                color: "text.primary",
-                fontSize: { xs: 22, md: 24 },
-                fontWeight: 800,
-                letterSpacing: "-0.03em"
-              }}
-            >
-              СканПроверка
+            <Button onClick={() => navigate("/")} sx={{ p: 0, minWidth: 0, textAlign: "left" }}>
+              <BrandMark />
             </Button>
           </Box>
 
-          <Stack direction="row" spacing={0.5} sx={{ display: { xs: "none", md: "flex" }, alignItems: "center" }}>
+          <Stack direction="row" spacing={0.75} sx={{ display: { xs: "none", md: "flex" }, alignItems: "center" }}>
             {navItems.map((item) => {
               const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
               return (
@@ -83,8 +85,10 @@ export function PublicHeader() {
                   color={active ? "primary" : "inherit"}
                   variant={active ? "contained" : "text"}
                   sx={{
-                    color: active ? "common.white" : "text.primary",
-                    bgcolor: active ? "primary.main" : "transparent"
+                    color: active ? "primary.contrastText" : "text.primary",
+                    bgcolor: active ? "primary.main" : "transparent",
+                    border: active ? "1px solid transparent" : "1px solid",
+                    borderColor: active ? "transparent" : "divider"
                   }}
                 >
                   {item.label}
@@ -93,25 +97,73 @@ export function PublicHeader() {
             })}
           </Stack>
 
+          <Stack direction="row" spacing={1} sx={{ display: { xs: "none", lg: "flex" }, alignItems: "center" }}>
+            <SiteContactActions />
+            {isAuthenticated ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minWidth: 0 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: "primary.main",
+                    cursor: "pointer",
+                    width: 38,
+                    height: 38,
+                    borderRadius: 0
+                  }}
+                  onClick={(event) => setMenuAnchor(event.currentTarget)}
+                >
+                  {user?.fullName?.[0] ?? "У"}
+                </Avatar>
+                <Box
+                  sx={{ display: { xs: "none", sm: "block" }, cursor: "pointer", minWidth: 0 }}
+                  onClick={(event) => setMenuAnchor(event.currentTarget as HTMLElement)}
+                >
+                  <Button sx={{ p: 0, minWidth: 0, color: "text.primary", fontWeight: 700 }}>{user?.fullName}</Button>
+                </Box>
+                <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+                  <MenuItem
+                    onClick={() => {
+                      setMenuAnchor(null);
+                      navigate("/profile");
+                    }}
+                  >
+                    Профиль
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      setMenuAnchor(null);
+                      logout();
+                    }}
+                  >
+                    Выйти
+                  </MenuItem>
+                </Menu>
+              </Box>
+            ) : (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button component={Link} to="/login" variant="outlined" color="primary" size="small">
+                  Войти
+                </Button>
+                <Button component={Link} to="/register" variant="contained" color="secondary">
+                  Регистрация
+                </Button>
+              </Stack>
+            )}
+          </Stack>
+
           {isAuthenticated ? (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minWidth: 0 }}>
+            <Box sx={{ display: { xs: "flex", lg: "none" }, alignItems: "center", gap: 1.25, minWidth: 0 }}>
               <Avatar
-                sx={{ bgcolor: "primary.main", cursor: "pointer", width: 38, height: 38 }}
+                sx={{
+                  bgcolor: "primary.main",
+                  cursor: "pointer",
+                  width: 38,
+                  height: 38,
+                  borderRadius: 0
+                }}
                 onClick={(event) => setMenuAnchor(event.currentTarget)}
               >
                 {user?.fullName?.[0] ?? "У"}
               </Avatar>
-              <Box
-                sx={{ display: { xs: "none", sm: "block" }, cursor: "pointer", minWidth: 0 }}
-                onClick={(event) => setMenuAnchor(event.currentTarget as HTMLElement)}
-              >
-                <Typography variant="body1" fontWeight={700} noWrap>
-                  {user?.fullName}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" noWrap>
-                  {user?.email}
-                </Typography>
-              </Box>
               <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
                 <MenuItem
                   onClick={() => {
@@ -132,12 +184,9 @@ export function PublicHeader() {
               </Menu>
             </Box>
           ) : (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Button component={Link} to="/login" sx={{ display: { xs: "none", sm: "inline-flex" } }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ display: { xs: "flex", lg: "none" } }}>
+              <Button component={Link} to="/login" variant="outlined" color="primary" size="small">
                 Войти
-              </Button>
-              <Button component={Link} to="/register" variant="contained" color="secondary">
-                Регистрация
               </Button>
             </Stack>
           )}
@@ -145,16 +194,20 @@ export function PublicHeader() {
       </AppBar>
 
       <Drawer open={mobileDrawerOpen} onClose={() => setMobileDrawerOpen(false)} sx={{ display: { xs: "block", md: "none" } }}>
-        <Box sx={{ width: 280, p: 2.5 }}>
-          <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
-            СканПроверка
-          </Typography>
+        <Box sx={{ width: 292, p: 2.5, height: "100%", bgcolor: "background.paper" }}>
+          <Box sx={{ mb: 2.5 }}>
+            <BrandMark />
+          </Box>
           <List sx={{ p: 0 }}>
             {navItems.map((item) => (
               <ListItemButton
                 key={item.label}
                 selected={location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)}
-                sx={{ borderRadius: 3, mb: 0.5 }}
+                sx={{
+                  mb: 0.75,
+                  border: "1px solid",
+                  borderColor: "divider"
+                }}
                 onClick={() => {
                   navigate(item.path);
                   setMobileDrawerOpen(false);
@@ -163,9 +216,16 @@ export function PublicHeader() {
                 <ListItemText primary={item.label} />
               </ListItemButton>
             ))}
-            {!isAuthenticated && (
+          </List>
+
+          <Box sx={{ mt: 2 }}>
+            <SiteContactActions mobile onNavigate={() => setMobileDrawerOpen(false)} />
+          </Box>
+
+          {!isAuthenticated && (
+            <List sx={{ p: 0, mt: 2 }}>
               <ListItemButton
-                sx={{ borderRadius: 3, mt: 1 }}
+                sx={{ mb: 0.75, border: "1px solid", borderColor: "divider" }}
                 onClick={() => {
                   navigate("/login");
                   setMobileDrawerOpen(false);
@@ -173,8 +233,17 @@ export function PublicHeader() {
               >
                 <ListItemText primary="Войти" />
               </ListItemButton>
-            )}
-          </List>
+              <ListItemButton
+                sx={{ border: "1px solid", borderColor: "divider" }}
+                onClick={() => {
+                  navigate("/register");
+                  setMobileDrawerOpen(false);
+                }}
+              >
+                <ListItemText primary="Регистрация" />
+              </ListItemButton>
+            </List>
+          )}
         </Box>
       </Drawer>
     </>

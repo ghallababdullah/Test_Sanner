@@ -9,6 +9,7 @@ export interface ScannedBlankResponse {
   needsReview: boolean;
   reviewStatus: string;
   processingStatus: string;
+  processingError?: string;
   grade?: string;
   percentage?: number;
   scannedAt?: string;

@@ -43,15 +43,15 @@ export function TestDetailsPage() {
         <Grid size={{ xs: 12, md: 6 }}>
           <SectionCard title="Подготовка теста" subtitle="Ключевые действия перед сканированием.">
             <Stack spacing={2}>
-              <Button variant="contained" onClick={() => navigate(`/tests/${testId}/answer-keys`)}>Добавить ответы</Button>
-              <Button variant="contained" color="secondary" onClick={() => navigate(`/tests/${testId}/grade-thresholds`)}>Добавить пороги оценок</Button>
+              <Button variant="contained" onClick={() => navigate(`/tests/${testId}/answer-keys`)}>Редактировать ответы</Button>
+              <Button variant="contained" color="secondary" onClick={() => navigate(`/tests/${testId}/grade-thresholds`)}>Редактировать критерии оценки</Button>
               <Button variant="outlined" onClick={() => navigate(`/tests/${testId}/edit`)}>Редактировать тест</Button>
               <Button variant="outlined" onClick={() => navigate(`/tests/${testId}/analytics`)}>Открыть аналитику</Button>
             </Stack>
           </SectionCard>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <SectionCard title="Сканирование и проверка" subtitle="Рабочий поток преподавателя.">
+          <SectionCard title="Сканирование и проверка" subtitle="Рабочий поток учителя.">
             <Stack spacing={2}>
               <Button variant="contained" onClick={() => navigate(`/scan/sessions/${testId}`)}>Начать сессию сканирования</Button>
               <Button variant="outlined" onClick={() => navigate(`/tests/${testId}/review`)}>Открыть очередь проверки</Button>

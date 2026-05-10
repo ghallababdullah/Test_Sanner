@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Box, Button, Card, CardContent, Container, Grid, Stack, Typography } from "@mui/material";
 import { useAuth } from "../../auth/AuthContext";
 import { PublicHeader } from "../components/PublicHeader";
+import { SiteFooter } from "../../site/components/SiteFooter";
 
 const steps = [
   {
@@ -34,10 +35,10 @@ export function HomePage() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", display: "flex", flexDirection: "column" }}>
       <PublicHeader />
 
-      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 6 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 6 }, flex: 1 }}>
         <Stack spacing={{ xs: 4, md: 6 }}>
           <Grid container spacing={{ xs: 3, md: 4 }} alignItems="center">
             <Grid size={{ xs: 12, lg: 7 }}>
@@ -146,6 +147,7 @@ export function HomePage() {
           </Card>
         </Stack>
       </Container>
+      <SiteFooter />
     </Box>
   );
 }

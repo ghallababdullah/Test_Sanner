@@ -49,9 +49,9 @@ export interface TestWithDetailsResponse {
 
 export interface CreateTestRequest {
   title: string;
-  subject: string;
-  classLevel: string;
-  description: string;
+  subject?: string;
+  classLevel?: string;
+  description?: string;
   totalQuestions: number;
   maxScore: number;
 }
@@ -59,7 +59,10 @@ export interface CreateTestRequest {
 export interface UpdateTestRequest {
   title?: string;
   subject?: string;
+  classLevel?: string;
   description?: string;
+  totalQuestions?: number;
+  maxScore?: number;
   isActive?: boolean;
 }
 

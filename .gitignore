@@ -3,3 +3,6 @@ Python_CV_OCR/output/
 Test_Scanner_backend/storage/
 Test_Scanner_backend/.gradle-home/
 Test_Scanner_backend/.gradle-home-analytics/
+Test_Scanner_backend/.env
+frontend/.env
+frontend/.cert/

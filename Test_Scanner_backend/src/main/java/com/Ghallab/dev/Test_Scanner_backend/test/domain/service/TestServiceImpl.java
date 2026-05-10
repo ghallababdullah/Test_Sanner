@@ -2,6 +2,7 @@ package com.Ghallab.dev.Test_Scanner_backend.test.domain.service;
 
 import com.Ghallab.dev.Test_Scanner_backend.auth.domain.repository.UserRepository;
 import com.Ghallab.dev.Test_Scanner_backend.common.Response.Response;
+import com.Ghallab.dev.Test_Scanner_backend.common.exceptions.BadRequestException;
 import com.Ghallab.dev.Test_Scanner_backend.common.exceptions.NotFoundException;
 import com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.AnswerKey;
 import com.Ghallab.dev.Test_Scanner_backend.test.domain.entity.GradeThreshold;
@@ -136,9 +137,20 @@ public class TestServiceImpl implements TestService {
 
         log.info("✅ Test found: {}", test.getTitle());
 
+        Integer previousTotalQuestions = test.getTotalQuestions();
+        Integer nextTotalQuestions = request.getTotalQuestions();
+        if (nextTotalQuestions != null && (nextTotalQuestions < 1 || nextTotalQuestions > 32)) {
+            throw new BadRequestException("Total questions must be between 1 and 32");
+        }
+
         // ✅ Обновить поля из Request (только не-null значения)
         testMapper.updateTestFromRequest(request, test);
         log.info("📝 Test fields updated");
+
+        if (nextTotalQuestions != null && nextTotalQuestions < previousTotalQuestions) {
+            answerKeyRepository.deleteByTestIdAndQuestionNumberGreaterThan(testId, nextTotalQuestions);
+            log.info("✅ Deleted answer keys above question {}", nextTotalQuestions);
+        }
 
         // ✅ Сохранить обновленный тест в БД
         Test updatedTest = testRepository.save(test);

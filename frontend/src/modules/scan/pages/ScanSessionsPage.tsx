@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AxiosError } from "axios";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Alert,
   Avatar,
   Box,
   Button,
+  Card,
+  CardContent,
   Chip,
   Divider,
   Grid,
@@ -13,7 +16,6 @@ import {
   Stack,
   Tab,
   Tabs,
-  TextField,
   Typography
 } from "@mui/material";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
@@ -29,7 +31,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { SectionCard } from "../../../shared/components/SectionCard";
 import { fetchTestDetails } from "../../tests/api";
 import { fetchSessionBlanks, startScanSession, submitScannedBlank, submitScannedBlankForPreview } from "../api";
+import type { ApiResponse } from "../../../shared/types/api";
 import type { ScanSessionResponse } from "../../../shared/types/scan";
+import { explainScanError } from "../../review/scanErrorMessages";
 
 type CaptureMode = "file" | "camera";
 type QueueStatus = "queued" | "uploading" | "uploaded" | "failed";
@@ -131,6 +135,24 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
+function explainScanRequestError(error: unknown) {
+  if (!(error instanceof AxiosError)) {
+    return "Не удалось загрузить бланк. Попробуйте ещё раз.";
+  }
+
+  const responseMessage = (error.response?.data as ApiResponse<unknown> | undefined)?.message;
+  const scanError = explainScanError(responseMessage);
+  if (scanError) {
+    return `${scanError.title}. ${scanError.details}${scanError.nextStep ? ` Что сделать: ${scanError.nextStep}` : ""}`;
+  }
+
+  if (!error.response) {
+    return "Нет связи с сервером во время загрузки бланка. Проверьте сеть и попробуйте снова.";
+  }
+
+  return responseMessage || `Ошибка загрузки бланка. Код ответа: ${error.response.status}.`;
+}
+
 function CameraGuide({
   available,
   status,
@@ -147,70 +169,82 @@ function CameraGuide({
   videoRef: React.RefObject<HTMLVideoElement | null>;
 }) {
   return (
-    <SectionCard
-      title="Камера устройства"
-      subtitle="Расположите бланк внутри A4-рамки. Так системе легче найти лист и правильно разметить поля ещё до распознавания."
+    <Card
+      sx={{
+        overflow: "hidden",
+        bgcolor: "#08111d"
+      }}
     >
-      <Stack spacing={2}>
+      <CardContent sx={{ p: { xs: 1.25, md: 2 } }}>
+        <Stack spacing={1.5}>
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Камера устройства
+            </Typography>
+            <Typography variant="body2" color="rgba(255,255,255,0.78)">
+              Режим съёмки открыт почти на весь экран. Держите лист строго внутри A4-рамки перед снимком.
+            </Typography>
+          </Box>
         <Box
           sx={{
             position: "relative",
-            borderRadius: 4,
+            borderRadius: 2,
             overflow: "hidden",
-            bgcolor: "#101826",
-            minHeight: { xs: 320, md: 380 },
+            bgcolor: "#050b14",
+            minHeight: { xs: "calc(100vh - 290px)", md: "78vh" },
+            maxHeight: { xs: "calc(100vh - 290px)", md: "78vh" },
             border: "1px solid rgba(255,255,255,0.12)"
           }}
         >
-          {available ? (
-            <>
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  minHeight: 320,
-                  objectFit: "cover",
-                  display: "block"
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            style={{
+              width: "100%",
+              height: "100%",
+              minHeight: 320,
+              objectFit: "cover",
+              display: "block",
+              opacity: available ? 1 : 0.08
+            }}
+          />
+          <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+            <Box
+              sx={{
+                position: "absolute",
+                width: { xs: "72%", sm: "60%", md: "46%" },
+                aspectRatio: "210 / 297",
+                left: "50%",
+                top: "50%",
+                transform: "translate(-50%, -50%)",
+                border: "3px solid rgba(255,255,255,0.95)",
+                boxShadow: "0 0 0 9999px rgba(6, 11, 20, 0.28)"
+              }}
+            />
+            <Box
+              sx={{
+                position: "absolute",
+                left: "50%",
+                bottom: 16,
+                transform: "translateX(-50%)",
+                px: 2,
+                py: 0.75,
+                  bgcolor: "rgba(10, 17, 29, 0.72)",
+                  borderRadius: 999,
+                  color: "common.white"
                 }}
-              />
-              <Box sx={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-                <Box
-                  sx={{
-                    position: "absolute",
-                    left: "10%",
-                    right: "10%",
-                    top: "8%",
-                    bottom: "8%",
-                    borderRadius: 3,
-                    border: "3px solid rgba(255,255,255,0.95)",
-                    boxShadow: "0 0 0 9999px rgba(6, 11, 20, 0.28)"
-                  }}
-                />
-                <Box
-                  sx={{
-                    position: "absolute",
-                    left: "50%",
-                    bottom: 16,
-                    transform: "translateX(-50%)",
-                    px: 2,
-                    py: 0.75,
-                    bgcolor: "rgba(10, 17, 29, 0.72)",
-                    borderRadius: 999,
-                    color: "common.white"
-                  }}
-                >
-                  <Typography variant="body2">Держите бланк внутри рамки A4</Typography>
-                </Box>
-              </Box>
-            </>
-          ) : (
+              >
+              <Typography variant="body2">Совместите весь лист с рамкой A4</Typography>
+            </Box>
+          </Box>
+          {!available ? (
             <Stack
               spacing={2}
               sx={{
+                position: "absolute",
+                inset: 0,
                 minHeight: 320,
                 alignItems: "center",
                 justifyContent: "center",
@@ -224,13 +258,13 @@ function CameraGuide({
               </Avatar>
               <Typography variant="h6">Камера не запущена</Typography>
               <Typography variant="body2" sx={{ maxWidth: 420, opacity: 0.8 }}>
-                {error ?? "Если браузер не даёт live-preview, можно открыть системную камеру и добавить фото через стандартный выбор файла."}
+                {error ?? "Если браузер не показывает изображение с камеры сразу, можно открыть системную камеру и добавить фото через обычный выбор файла."}
               </Typography>
               <Button variant="contained" onClick={onOpenFallback} startIcon={<PhotoCameraRoundedIcon />}>
                 Открыть камеру устройства
               </Button>
             </Stack>
-          )}
+          ) : null}
         </Box>
 
         <Alert severity={error ? "warning" : "info"}>
@@ -245,21 +279,22 @@ function CameraGuide({
             Открыть системную камеру
           </Button>
         </Stack>
-      </Stack>
-    </SectionCard>
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }
 
 export function ScanSessionsPage() {
   const { sessionId = "" } = useParams();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<CaptureMode>("file");
+  const [mode, setMode] = useState<CaptureMode>("camera");
   const [processingFlow, setProcessingFlow] = useState<ProcessingFlow>("guided");
   const [queueItems, setQueueItems] = useState<QueuedBlank[]>([]);
   const [session, setSession] = useState<ScanSessionResponse | null>(null);
-  const [testDate, setTestDate] = useState("");
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraStatus, setCameraStatus] = useState("Откройте камеру и расположите лист внутри рамки A4.");
+  const [isCameraReady, setIsCameraReady] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -354,7 +389,6 @@ export function ScanSessionsPage() {
             scanSessionId: activeSession.id,
             testId: testQuery.data.id,
             image: item.file,
-            testDate: testDate || undefined,
             onUploadProgress: (event) => {
               const total = event.total ?? item.file.size;
               const progress = total > 0 ? Math.min(100, Math.round((event.loaded / total) * 100)) : 0;
@@ -412,10 +446,18 @@ export function ScanSessionsPage() {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
+      setIsCameraReady(false);
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      setIsCameraReady(false);
+      setCameraError("Live-камера работает только в защищённом режиме. Откройте сайт по HTTPS или через localhost, либо используйте системную камеру ниже.");
       return;
     }
 
     if (!navigator.mediaDevices?.getUserMedia) {
+      setIsCameraReady(false);
       setCameraError("Браузер не поддерживает live-камеру. Можно использовать системную камеру через кнопку ниже.");
       return;
     }
@@ -424,6 +466,7 @@ export function ScanSessionsPage() {
     const startCamera = async () => {
       try {
         setCameraError(null);
+        setIsCameraReady(false);
         setCameraStatus("Поднесите телефон ближе и держите лист полностью внутри рамки.");
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -441,9 +484,31 @@ export function ScanSessionsPage() {
 
         streamRef.current = stream;
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          const video = videoRef.current;
+          video.srcObject = stream;
+          await video.play().catch(() => undefined);
+
+          if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+            setIsCameraReady(true);
+            setCameraStatus("Камера готова. Держите бланк внутри рамки A4 и сделайте снимок.");
+            return;
+          }
+
+          await new Promise<void>((resolve) => {
+            const markReady = () => {
+              video.removeEventListener("loadedmetadata", markReady);
+              video.removeEventListener("canplay", markReady);
+              resolve();
+            };
+
+            video.addEventListener("loadedmetadata", markReady, { once: true });
+            video.addEventListener("canplay", markReady, { once: true });
+          });
         }
+        setIsCameraReady(true);
+        setCameraStatus("Камера готова. Держите бланк внутри рамки A4 и сделайте снимок.");
       } catch {
+        setIsCameraReady(false);
         setCameraError("Не удалось открыть live-камеру. Проверьте разрешение браузера или используйте системную камеру.");
       }
     };
@@ -456,6 +521,7 @@ export function ScanSessionsPage() {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
+      setIsCameraReady(false);
     };
   }, [mode]);
 
@@ -543,7 +609,7 @@ export function ScanSessionsPage() {
 
       {uploadMutation.isError ? (
         <Alert severity="error">
-          Один из бланков не удалось загрузить. Исправьте проблему и повторите отправку.
+          {explainScanRequestError(uploadMutation.error)}
         </Alert>
       ) : null}
 
@@ -577,8 +643,8 @@ export function ScanSessionsPage() {
           ) : null}
 
           <SectionCard
-            title="Режим обработки"
-            subtitle="В одном режиме можно сначала проверить разметку полей. Во втором распознавание запускается сразу."
+            title="Как проверить бланк"
+            subtitle="В одном режиме можно сначала посмотреть, как система выделила поля. Во втором режиме проверка начинается сразу."
           >
             <Stack spacing={2}>
               <Tabs value={processingFlow} onChange={(_, value) => setProcessingFlow(value)} variant="scrollable">
@@ -608,22 +674,14 @@ export function ScanSessionsPage() {
               <Tab value="camera" label="Камера телефона" />
             </Tabs>
 
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, lg: 7 }}>
-                {mode === "file" ? (
+            {mode === "file" ? (
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, lg: 7 }}>
                   <SectionCard
                     title="Загрузка файлов"
-                    subtitle="Можно выбрать сразу несколько бланков. Они войдут в одну scan session, но каждый будет обработан как отдельный бланк."
+                    subtitle="Можно выбрать сразу несколько бланков. Они войдут в одну сессию сканирования, но каждый будет обработан как отдельный бланк."
                   >
                     <Stack spacing={2}>
-                      <TextField
-                        label="Дата теста"
-                        type="date"
-                        value={testDate}
-                        onChange={(event) => setTestDate(event.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                      />
-
                       <input
                         ref={inputRef}
                         hidden
@@ -645,30 +703,42 @@ export function ScanSessionsPage() {
                       </Typography>
                     </Stack>
                   </SectionCard>
-                ) : (
+                </Grid>
+
+                <Grid size={{ xs: 12, lg: 5 }}>
+                  <SectionCard title="Подсказки по качеству">
+                    <Stack spacing={1.5}>
+                      <Typography>• Весь лист A4 должен быть виден целиком</Typography>
+                      <Typography>• Камеру лучше держать параллельно бланку</Typography>
+                      <Typography>• Углы и маркеры должны попадать внутрь кадра</Typography>
+                      <Typography>• Если фото плохое, лучше переснять сразу, чем исправлять потом</Typography>
+                      <Typography>• В режиме проверки после загрузки откроется шаг проверки разметки полей</Typography>
+                    </Stack>
+                  </SectionCard>
+                </Grid>
+              </Grid>
+            ) : (
+              <Stack spacing={2}>
+                <Box sx={{ mx: { xs: -1, md: 0 } }}>
                   <CameraGuide
-                    available={Boolean(streamRef.current)}
+                    available={isCameraReady}
                     status={cameraStatus}
                     error={cameraError}
                     videoRef={videoRef}
                     onCapture={captureFrame}
                     onOpenFallback={() => cameraInputRef.current?.click()}
                   />
-                )}
-              </Grid>
-
-              <Grid size={{ xs: 12, lg: 5 }}>
-                <SectionCard title="Подсказки по качеству">
+                </Box>
+                <SectionCard title="Подсказки по съёмке">
                   <Stack spacing={1.5}>
-                    <Typography>• Весь лист A4 должен быть виден целиком</Typography>
-                    <Typography>• Камеру лучше держать параллельно бланку</Typography>
-                    <Typography>• Углы и маркеры должны попадать внутрь кадра</Typography>
-                    <Typography>• Если фото плохое, лучше переснять сразу, чем исправлять потом</Typography>
-                    <Typography>• В режиме проверки после загрузки откроется шаг проверки разметки полей</Typography>
+                    <Typography>• Режим камеры теперь приоритетный и занимает почти весь экран</Typography>
+                    <Typography>• Белая рамка повторяет портретный лист A4, поэтому весь лист должен войти внутрь</Typography>
+                    <Typography>• Держите телефон прямо над бланком, без сильного наклона</Typography>
+                    <Typography>• Если края листа выходят за рамку, немного отведите телефон выше</Typography>
                   </Stack>
                 </SectionCard>
-              </Grid>
-            </Grid>
+              </Stack>
+            )}
           </Box>
 
           <input

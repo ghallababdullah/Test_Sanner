@@ -1,5 +1,6 @@
 package com.Ghallab.dev.Test_Scanner_backend.auth.domain.service;
 
+import com.Ghallab.dev.Test_Scanner_backend.auth.dto.ChangePasswordRequest;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.LoginRequest;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.LoginResponse;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.RegistrationRequest;
@@ -13,4 +14,5 @@ public interface AuthService {
     Response<String> verifyEmail(String token);
     Response<String> forgetPassword(String email);
     Response<String> resetPassword(String token, ResetPasswordRequest request);
+    Response<String> changePassword(ChangePasswordRequest request);
 }

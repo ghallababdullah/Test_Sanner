@@ -15,55 +15,36 @@ import {
 } from "@mui/material";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import { useNavigate, useParams } from "react-router-dom";
-import { applyBlankCorrections, fetchBlankAsset, fetchBlankDetails } from "../api";
+import { applyBlankCorrections, fetchBlankAsset, fetchBlankDetails, retryBlankOcr } from "../api";
 import { SectionCard } from "../../../shared/components/SectionCard";
 import { fetchAnswerKeys } from "../../tests/api";
+import { explainScanError } from "../scanErrorMessages";
+import { formatMatchType, formatProcessingStatus } from "../statusLabels";
 
 function formatDateTime(value?: string) {
   if (!value) {
     return "—";
   }
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
+
   return new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "short",
     timeStyle: "short"
   }).format(date);
 }
 
-function formatStatus(status?: string) {
-  switch (status) {
-    case "OCR_COMPLETED":
-      return "OCR завершён";
-    case "PROCESSING":
-      return "Обрабатывается";
-    case "QUEUED":
-      return "В очереди";
-    case "OCR_FAILED":
-      return "Ошибка OCR";
-    default:
-      return status ?? "—";
+function formatConfidence(value?: number) {
+  if (value == null || Number.isNaN(value)) {
+    return "—";
   }
-}
 
-function formatMatchType(matchType?: string) {
-  switch (matchType) {
-    case "EXACT_MATCH":
-      return "Полное совпадение";
-    case "ONE_CHAR_DIFF":
-      return "Отличие в 1 символ";
-    case "TWO_CHAR_DIFF":
-      return "Отличие в 2 символа";
-    case "NO_MATCH":
-      return "Нет совпадения";
-    case "PENDING_SCORING":
-      return "Оценивание не готово";
-    default:
-      return matchType ?? "—";
-  }
+  return `${Math.round(value * 100)}%`;
 }
 
 function matchTypeColor(matchType?: string): "success" | "warning" | "error" | "default" {
@@ -75,30 +56,41 @@ function matchTypeColor(matchType?: string): "success" | "warning" | "error" | "
       return "warning";
     case "NO_MATCH":
       return "error";
-    case "PENDING_SCORING":
-      return "default";
     default:
       return "default";
   }
 }
 
-function formatConfidence(value?: number) {
-  if (value == null || Number.isNaN(value)) {
-    return "—";
+function formatEngineName(engine?: string) {
+  switch (engine) {
+    case "tesseract":
+      return "Tesseract";
+    case "trocr":
+      return "TrOCR";
+    case "combined":
+    case "ensemble":
+      return "Совмещённая оценка";
+    default:
+      return engine ?? "";
   }
-  return `${Math.round(value * 100)}%`;
 }
 
-function getConfidenceBadge(value?: number, reviewRecommended?: boolean): { label: string; color: "success" | "warning" | "error" | "default" } {
+function getConfidenceBadge(
+  value?: number,
+  reviewRecommended?: boolean
+): { label: string; color: "success" | "warning" | "error" | "default" } {
   if (value == null) {
-    return { label: "Нет confidence", color: "default" };
+    return { label: "Нет оценки уверенности", color: "default" };
   }
+
   if (reviewRecommended || value < 0.75) {
     return { label: `Низкая уверенность ${formatConfidence(value)}`, color: "error" };
   }
+
   if (value < 0.9) {
     return { label: `Средняя уверенность ${formatConfidence(value)}`, color: "warning" };
   }
+
   return { label: `Высокая уверенность ${formatConfidence(value)}`, color: "success" };
 }
 
@@ -122,6 +114,18 @@ function useAssetUrl(blob?: Blob) {
   return url;
 }
 
+function buildStatusTone(status?: string): "success" | "warning" | "error" {
+  if (status === "OCR_COMPLETED") {
+    return "success";
+  }
+
+  if (status === "OCR_FAILED") {
+    return "error";
+  }
+
+  return "warning";
+}
+
 export function BlankDetailsPage() {
   const { blankId = "" } = useParams();
   const navigate = useNavigate();
@@ -132,7 +136,11 @@ export function BlankDetailsPage() {
   const detailsQuery = useQuery({
     queryKey: ["blank-details", blankId],
     queryFn: () => fetchBlankDetails(blankId),
-    enabled: !!blankId
+    enabled: !!blankId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.processingStatus;
+      return status === "QUEUED" || status === "PROCESSING" ? 3000 : false;
+    }
   });
 
   const answerKeysQuery = useQuery({
@@ -182,7 +190,16 @@ export function BlankDetailsPage() {
     }
   });
 
+  const startOcrMutation = useMutation({
+    mutationFn: () => retryBlankOcr(blankId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["blank-details", blankId] });
+      await queryClient.invalidateQueries({ queryKey: ["test-blanks"] });
+    }
+  });
+
   const data = detailsQuery.data;
+  const scanError = explainScanError(data?.processingError);
   const originalUrl = useAssetUrl(originalAssetQuery.data);
   const processedUrl = useAssetUrl(processedAssetQuery.data);
   const annotatedUrl = useAssetUrl(annotatedAssetQuery.data);
@@ -200,13 +217,15 @@ export function BlankDetailsPage() {
   const previewHint = useMemo(() => {
     if (previewTab === "annotated") {
       return annotatedUrl
-        ? "Это схема разметки полей. По ней видно, как система разделила бланк на области для распознавания."
-        : "Схема разметки полей пока недоступна, поэтому временно показываем выровненный бланк.";
+        ? "Схема разметки полей. Здесь видно, как система разделила бланк на зоны для распознавания."
+        : "Схема разметки пока недоступна, поэтому временно показываем выровненный бланк.";
     }
+
     if (previewTab === "processed") {
-      return "Это выровненное изображение после детекции листа и перспективного преобразования.";
+      return "Выровненное изображение после определения листа и исправления перспективы.";
     }
-    return "Это исходное изображение, которое пользователь загрузил или снял камерой.";
+
+    return "Исходное изображение, которое было загружено или снято камерой.";
   }, [annotatedUrl, previewTab]);
 
   const sortedAnswerGrades = useMemo(() => {
@@ -250,10 +269,13 @@ export function BlankDetailsPage() {
   );
 
   const canApplyCorrections = useMemo(
-    () =>
-      Object.values(draftCorrections).some((value) => value.trim().length > 0),
+    () => Object.values(draftCorrections).some((value) => value.trim().length > 0),
     [draftCorrections]
   );
+
+  const isOcrCompleted = data?.processingStatus === "OCR_COMPLETED";
+  const canStartOcr = data?.processingStatus === "PENDING_OCR";
+  const isOcrInProgress = data?.processingStatus === "QUEUED" || data?.processingStatus === "PROCESSING";
 
   if (detailsQuery.isLoading && !data) {
     return (
@@ -269,8 +291,8 @@ export function BlankDetailsPage() {
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4">Бланк</Typography>
+      <Box sx={{ borderLeft: "6px solid", borderColor: "primary.main", pl: 2 }}>
+        <Typography variant="h4">Карточка бланка</Typography>
         <Typography color="text.secondary">{data.studentName || "Без имени"}</Typography>
       </Box>
 
@@ -283,7 +305,7 @@ export function BlankDetailsPage() {
                 <Typography>Дата теста: {data.testDate || "—"}</Typography>
                 <Typography>Оценка: {data.grade || "—"}</Typography>
                 <Typography>
-                  Балл: {data.rawScore}/{data.maxScore}
+                  Баллы: {data.rawScore}/{data.maxScore}
                 </Typography>
                 <Typography>Процент: {data.percentage ?? 0}%</Typography>
                 <Typography>Нужна проверка: {data.needsReview ? "Да" : "Нет"}</Typography>
@@ -292,13 +314,25 @@ export function BlankDetailsPage() {
               </Stack>
             </SectionCard>
 
-            <SectionCard title="Статус распознавания">
+            <SectionCard title="Статус распознавания" subtitle="Сначала подтвердите разметку, затем запустите проверку и дождитесь завершения OCR.">
               <Stack spacing={1.5}>
-                <Chip
-                  color={data.processingStatus === "OCR_COMPLETED" ? "success" : data.processingStatus === "OCR_FAILED" ? "error" : "warning"}
-                  label={formatStatus(data.processingStatus)}
-                />
-                {data.processingError ? <Alert severity="error">{data.processingError}</Alert> : null}
+                <Chip color={buildStatusTone(data.processingStatus)} label={formatProcessingStatus(data.processingStatus)} />
+                {scanError ? (
+                  <Alert severity="error">
+                    <strong>{scanError.title}</strong>
+                    <br />
+                    {scanError.details}
+                    {scanError.nextStep ? (
+                      <>
+                        <br />
+                        Что сделать: {scanError.nextStep}
+                      </>
+                    ) : null}
+                  </Alert>
+                ) : null}
+                {startOcrMutation.isError ? (
+                  <Alert severity="error">Не удалось запустить распознавание. Попробуйте ещё раз.</Alert>
+                ) : null}
                 <Button
                   variant="outlined"
                   startIcon={<VisibilityRoundedIcon />}
@@ -306,6 +340,16 @@ export function BlankDetailsPage() {
                 >
                   Проверить разметку полей
                 </Button>
+                {canStartOcr ? (
+                  <Button
+                    variant="contained"
+                    startIcon={<PlayArrowRoundedIcon />}
+                    onClick={() => startOcrMutation.mutate()}
+                    disabled={startOcrMutation.isPending}
+                  >
+                    {startOcrMutation.isPending ? "Запускаем проверку..." : "Начать проверку"}
+                  </Button>
+                ) : null}
               </Stack>
             </SectionCard>
 
@@ -325,14 +369,13 @@ export function BlankDetailsPage() {
             <Stack spacing={2}>
               <Tabs value={previewTab} onChange={(_, value) => setPreviewTab(value)} variant="scrollable">
                 <Tab value="annotated" label="Разметка полей" />
-                <Tab value="processed" label="Выровненный" />
+                <Tab value="processed" label="Выровненный бланк" />
                 <Tab value="original" label="Оригинал" />
               </Tabs>
 
               {previewTab === "annotated" && annotatedAssetQuery.isError ? (
                 <Alert severity="info">
-                  Схема разметки полей для этого бланка пока не найдена. Если вы выбрали режим предварительной проверки,
-                  сначала откройте страницу разметки. Пока временно используем выровненное изображение.
+                  Схема разметки для этого бланка пока не найдена. Поэтому временно показываем выровненное изображение.
                 </Alert>
               ) : null}
 
@@ -347,16 +390,13 @@ export function BlankDetailsPage() {
                   alt="Бланк"
                   sx={{
                     width: "100%",
-                    borderRadius: 3,
                     border: "1px solid",
                     borderColor: "divider",
-                    bgcolor: "background.default"
+                    bgcolor: "#fffdf8"
                   }}
                 />
               ) : (
-                <Alert severity="warning">
-                  Не удалось получить изображение для предпросмотра. Проверьте, что файлы обработки сохранились для этого бланка.
-                </Alert>
+                <Alert severity="warning">Не удалось получить изображение для предпросмотра.</Alert>
               )}
             </Stack>
           </SectionCard>
@@ -364,47 +404,57 @@ export function BlankDetailsPage() {
       </Grid>
 
       <SectionCard
-        title="Сравнение с эталонными ответами"
+        title="Сравнение с правильными ответами"
         subtitle="Здесь видно, какой ответ увидела система, какой ответ принят как итоговый и какие правки можно внести вручную."
       >
         <Stack spacing={2}>
-          {data.answerGrades.length === 0 ? (
+          {!isOcrCompleted ? (
+            <Alert severity="info">
+              {canStartOcr
+                ? "Разметка уже подтверждена, но распознавание ещё не запускалось. Нажмите «Начать проверку» в блоке статуса распознавания."
+                : isOcrInProgress
+                  ? "Распознавание ещё выполняется. Сравнение ответов и ручные исправления станут доступны сразу после завершения."
+                  : "Сравнение ответов появится после завершения распознавания."}
+            </Alert>
+          ) : data.answerGrades.length === 0 ? (
             <Alert severity="info">
               Распознавание уже завершено, но детальное оценивание по вопросам ещё не пришло. Поэтому сейчас показываем ответы,
               собранные напрямую из результатов распознавания и ключей теста.
             </Alert>
           ) : null}
+
           {applyCorrectionsMutation.isError ? (
-            <Alert severity="error">
-              Не удалось применить исправления. Проверь заполненные значения и попробуй ещё раз.
-            </Alert>
+            <Alert severity="error">Не удалось применить исправления. Проверьте значения и попробуйте ещё раз.</Alert>
           ) : null}
+
           {applyCorrectionsMutation.isSuccess ? (
             <Alert severity="success">Исправления сохранены. Карточка бланка уже обновлена.</Alert>
           ) : null}
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} justifyContent="space-between">
-            <Typography variant="body2" color="text.secondary">
-              Если система ошиблась, введите правильный ответ в поле нужного вопроса и нажмите «Применить исправления».
-            </Typography>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-              <Button
-                variant="text"
-                onClick={() => setDraftCorrections(data.errorCorrections ?? {})}
-                disabled={applyCorrectionsMutation.isPending}
-              >
-                Сбросить изменения
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<SaveRoundedIcon />}
-                disabled={!canApplyCorrections || applyCorrectionsMutation.isPending}
-                onClick={() => applyCorrectionsMutation.mutate()}
-              >
-                {applyCorrectionsMutation.isPending ? "Сохраняем..." : "Применить исправления"}
-              </Button>
+          {isOcrCompleted ? (
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} justifyContent="space-between" alignItems={{ sm: "center" }}>
+              <Typography variant="body2" color="text.secondary">
+                Если система ошиблась, введите правильный ответ в нужное поле и нажмите «Применить исправления».
+              </Typography>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                <Button
+                  variant="text"
+                  onClick={() => setDraftCorrections(data.errorCorrections ?? {})}
+                  disabled={applyCorrectionsMutation.isPending}
+                >
+                  Сбросить изменения
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<SaveRoundedIcon />}
+                  disabled={!canApplyCorrections || applyCorrectionsMutation.isPending}
+                  onClick={() => applyCorrectionsMutation.mutate()}
+                >
+                  {applyCorrectionsMutation.isPending ? "Сохраняем..." : "Применить исправления"}
+                </Button>
+              </Stack>
             </Stack>
-          </Stack>
+          ) : null}
 
           <Grid container spacing={2}>
             {sortedAnswerGrades.map((answerGrade) => {
@@ -415,6 +465,7 @@ export function BlankDetailsPage() {
               const existingCorrection = data.errorCorrections?.[questionKey] ?? "";
               const assessment = data.answerAssessments?.[questionKey];
               const confidenceBadge = getConfidenceBadge(assessment?.combinedConfidence, assessment?.reviewRecommended);
+              const engineName = formatEngineName(assessment?.engine);
 
               return (
                 <Grid key={answerGrade.id || questionKey} size={{ xs: 12, md: 6, xl: 4 }}>
@@ -422,13 +473,14 @@ export function BlankDetailsPage() {
                     sx={{
                       border: "1px solid",
                       borderColor: "divider",
-                      borderRadius: 3,
-                      p: 2,
-                      height: "100%"
+                      bgcolor: "background.paper",
+                      height: "100%",
+                      position: "relative"
                     }}
                   >
-                    <Stack spacing={1.5}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Box sx={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 5, bgcolor: "primary.main" }} />
+                    <Stack spacing={1.5} sx={{ p: 2, pl: 2.5 }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
                         <Typography variant="h6">Вопрос {questionKey}</Typography>
                         <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" justifyContent="flex-end">
                           <Chip size="small" color={matchTypeColor(answerGrade.matchType)} label={formatMatchType(answerGrade.matchType)} />
@@ -437,20 +489,20 @@ export function BlankDetailsPage() {
                       </Stack>
 
                       <Typography variant="body2">
-                        Эталон: <strong>{answerGrade.correctAnswer || "—"}</strong>
+                        Правильный ответ: <strong>{answerGrade.correctAnswer || "—"}</strong>
                       </Typography>
                       <Typography variant="body2">
                         Ответ системы: <strong>{rawAnswer || "—"}</strong>
                       </Typography>
                       <Typography variant="body2">
-                        Финальный ответ: <strong>{finalAnswer || "—"}</strong>
+                        Итоговый ответ: <strong>{finalAnswer || "—"}</strong>
                       </Typography>
                       <Typography variant="body2">
                         Баллы: <strong>{answerGrade.matchType === "PENDING_SCORING" ? "—" : answerGrade.score}</strong> / {answerGrade.maxPoints}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Уверенность системы: <strong>{formatConfidence(assessment?.combinedConfidence)}</strong>
-                        {assessment?.engine ? ` · источник: ${assessment.engine}` : ""}
+                        Уверенность: <strong>{formatConfidence(assessment?.combinedConfidence)}</strong>
+                        {engineName ? ` · движок: ${engineName}` : ""}
                       </Typography>
 
                       {existingCorrection ? (
@@ -459,19 +511,21 @@ export function BlankDetailsPage() {
                         </Alert>
                       ) : null}
 
-                      <TextField
-                        label={`Исправить ответ для №${questionKey}`}
-                        value={draftValue}
-                        onChange={(event) =>
-                          setDraftCorrections((current) => ({
-                            ...current,
-                            [questionKey]: event.target.value
-                          }))
-                        }
-                        placeholder={answerGrade.correctAnswer || "Введите ответ"}
-                        size="small"
-                        fullWidth
-                      />
+                      {isOcrCompleted ? (
+                        <TextField
+                          label={`Исправить ответ для №${questionKey}`}
+                          value={draftValue}
+                          onChange={(event) =>
+                            setDraftCorrections((current) => ({
+                              ...current,
+                              [questionKey]: event.target.value
+                            }))
+                          }
+                          placeholder={answerGrade.correctAnswer || "Введите ответ"}
+                          size="small"
+                          fullWidth
+                        />
+                      ) : null}
                     </Stack>
                   </Box>
                 </Grid>

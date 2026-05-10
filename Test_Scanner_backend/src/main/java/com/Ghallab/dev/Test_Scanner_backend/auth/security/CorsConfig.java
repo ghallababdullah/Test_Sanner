@@ -20,6 +20,10 @@ public class CorsConfig {
         config.addAllowedOriginPattern("http://127.0.0.1:5173");
         config.addAllowedOriginPattern("http://192.168.56.1:5173");
         config.addAllowedOriginPattern("http://192.168.0.17:5173");
+        config.addAllowedOriginPattern("https://localhost:5173");
+        config.addAllowedOriginPattern("https://127.0.0.1:5173");
+        config.addAllowedOriginPattern("https://192.168.56.1:5173");
+        config.addAllowedOriginPattern("https://192.168.0.17:5173");
 
         // Allow all headers
         config.addAllowedHeader("*");

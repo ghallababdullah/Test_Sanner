@@ -2,6 +2,7 @@ package com.Ghallab.dev.Test_Scanner_backend.auth.domain.service;
 
 import com.Ghallab.dev.Test_Scanner_backend.auth.domain.entity.User;
 import com.Ghallab.dev.Test_Scanner_backend.auth.domain.repository.UserRepository;
+import com.Ghallab.dev.Test_Scanner_backend.auth.dto.ChangePasswordRequest;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.LoginRequest;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.LoginResponse;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.RegistrationRequest;
@@ -17,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,16 +75,12 @@ public class AuthServiceImpl implements AuthService {
                 .templateVariable(templateVariables)
                 .build();
 
-        try {
-            notificationService.sendEmail(verificationEmail);
-            log.info("Verification email sent to: {}", savedUser.getEmail());
-        } catch (Exception e) {
-            log.error("Failed to send verification email: {}", e.getMessage(), e);
-        }
+        notificationService.sendEmailAsync(verificationEmail);
+        log.info("Verification email queued for: {}", savedUser.getEmail());
 
         return Response.<String>builder()
                 .success(true)
-                .message("Пользователь зарегистрирован. Проверьте почту для подтверждения email.")
+                .message("Регистрация завершена. Проверьте почту и подтвердите адрес, чтобы продолжить работу.")
                 .data("Registration successful")
                 .build();
     }
@@ -201,16 +200,12 @@ public class AuthServiceImpl implements AuthService {
                 .templateVariable(templateVariables)
                 .build();
 
-        try {
-            notificationService.sendEmail(resetEmail);
-            log.info("Password reset email sent to: {}", email);
-        } catch (Exception e) {
-            log.error("Failed to send password reset email: {}", e.getMessage(), e);
-        }
+        notificationService.sendEmailAsync(resetEmail);
+        log.info("Password reset email queued for: {}", email);
 
         return Response.<String>builder()
                 .success(true)
-                .message("Письмо для сброса пароля отправлено. Проверьте электронную почту.")
+                .message("Запрос принят. Если адрес найден, письмо для сброса пароля придёт на вашу почту.")
                 .data("Reset email sent")
                 .build();
     }
@@ -243,5 +238,43 @@ public class AuthServiceImpl implements AuthService {
             log.error("Password reset failed: {}", e.getMessage(), e);
             throw new BadRequestException("Invalid or expired reset token: " + e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional
+    public Response<String> changePassword(ChangePasswordRequest request) {
+        User currentUser = getCurrentUser();
+        log.info("Changing password for user: {}", currentUser.getEmail());
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), currentUser.getPasswordHash())) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException("New password and confirmation do not match");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), currentUser.getPasswordHash())) {
+            throw new BadRequestException("New password must be different from the current password");
+        }
+
+        currentUser.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(currentUser);
+
+        return Response.<String>builder()
+                .success(true)
+                .message("Password changed successfully")
+                .data("Password changed successfully")
+                .build();
+    }
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new BadRequestException("Authenticated user not found");
+        }
+
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new NotFoundException("Authenticated user not found"));
     }
 }
