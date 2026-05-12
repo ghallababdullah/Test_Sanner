@@ -1,0 +1,132 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.springframework.boot",
+    "module": "spring-boot-http-converter",
+    "version": "4.0.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.2.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.springframework.boot",
+          "module": "spring-boot",
+          "version": {
+            "requires": "4.0.1"
+          }
+        },
+        {
+          "group": "org.springframework",
+          "module": "spring-web",
+          "version": {
+            "requires": "7.0.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-boot-http-converter-4.0.1.jar",
+          "url": "spring-boot-http-converter-4.0.1.jar",
+          "size": 54198,
+          "sha512": "14d4f46d786a7edb07f129d9154d0b65641f47c0722e38cd75d1665e8aaff4f347290a85d1a99fd29fa22ac0f06e52887a21864a8509ad4831cc943c7998432d",
+          "sha256": "60b958ec12489f2a97fed379449d077232dfa5ca24315baa04b944885df940a2",
+          "sha1": "ff2953160f2bffc4c888067300f9bf367ae55f26",
+          "md5": "8f9ed7914ecd4222df3a53fd54e10c1f"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.springframework.boot",
+          "module": "spring-boot",
+          "version": {
+            "requires": "4.0.1"
+          }
+        },
+        {
+          "group": "org.springframework",
+          "module": "spring-web",
+          "version": {
+            "requires": "7.0.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-boot-http-converter-4.0.1.jar",
+          "url": "spring-boot-http-converter-4.0.1.jar",
+          "size": 54198,
+          "sha512": "14d4f46d786a7edb07f129d9154d0b65641f47c0722e38cd75d1665e8aaff4f347290a85d1a99fd29fa22ac0f06e52887a21864a8509ad4831cc943c7998432d",
+          "sha256": "60b958ec12489f2a97fed379449d077232dfa5ca24315baa04b944885df940a2",
+          "sha1": "ff2953160f2bffc4c888067300f9bf367ae55f26",
+          "md5": "8f9ed7914ecd4222df3a53fd54e10c1f"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-boot-http-converter-4.0.1-javadoc.jar",
+          "url": "spring-boot-http-converter-4.0.1-javadoc.jar",
+          "size": 125625,
+          "sha512": "34e1b7cfc13fb965eba1f1c0a7c9169e40805d150e5ba7559965f7d86d2f4c3e03462d41fcc4c50ab53a9f6833eb04f0cdade3a69b7f7038e834e16cf3509e0d",
+          "sha256": "2c218db1acb30de4a03d7c0ec609bf1e3799054fa25eeb3f59819e2a7cdb85c8",
+          "sha1": "2882b2cb32f31872584f6fc1783858f9428ef29b",
+          "md5": "272723c7991bccee22ce7244ebed8cd1"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-boot-http-converter-4.0.1-sources.jar",
+          "url": "spring-boot-http-converter-4.0.1-sources.jar",
+          "size": 24977,
+          "sha512": "3700893762d6a994e1b937f748705126ed467619f2694d9a6496f9658af5bf529a8916af3bca96ef3b339ab783f5391ea5592f8f4c76bc9d0c205a2f96325aad",
+          "sha256": "424eb536921e95c1170785cc59dfb706b4774fceb0c7abbe23ed4133320bc2a2",
+          "sha1": "6de5069eebfa78a5d1740ba9b487eb92ba105397",
+          "md5": "07546f9c25b84aefe914435d0661ec3c"
+        }
+      ]
+    }
+  ]
+}

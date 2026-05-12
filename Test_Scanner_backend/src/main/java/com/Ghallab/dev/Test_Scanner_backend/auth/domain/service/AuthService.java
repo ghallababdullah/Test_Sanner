@@ -11,8 +11,10 @@ public interface AuthService {
     Response<String> register(RegistrationRequest request);
     Response<LoginResponse> login(LoginRequest loginRequest);
     Response<LoginResponse> refreshToken(String refreshToken);
+    Response<LoginResponse> getCurrentUserProfile();
     Response<String> verifyEmail(String token);
     Response<String> forgetPassword(String email);
     Response<String> resetPassword(String token, ResetPasswordRequest request);
     Response<String> changePassword(ChangePasswordRequest request);
+    Response<String> logout();
 }

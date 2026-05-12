@@ -9,9 +9,14 @@ import { registerRequest } from "../api";
 
 const schema = z
   .object({
-    firstName: z.string().min(2, "Минимум 2 символа"),
-    lastName: z.string().min(2, "Минимум 2 символа"),
-    email: z.string().email("Введите корректный email"),
+    firstName: z.string().trim().min(2, "Минимум 2 символа"),
+    lastName: z.string().trim().min(2, "Минимум 2 символа"),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Введите корректный email")
+      .regex(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/, "Введите email в формате name@example.com"),
     password: z.string().min(6, "Минимум 6 символов"),
     confirmPassword: z.string().min(6, "Минимум 6 символов")
   })

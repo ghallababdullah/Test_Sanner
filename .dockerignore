@@ -1,0 +1,16 @@
+.git
+.github
+frontend/node_modules
+frontend/dist
+frontend/.env
+frontend/.cert
+Test_Scanner_backend/.env
+Test_Scanner_backend/build
+Test_Scanner_backend/.gradle
+Test_Scanner_backend/.gradle-home
+Test_Scanner_backend/.gradle-home-analytics
+Test_Scanner_backend/.gradle-home-local
+Test_Scanner_backend/storage
+Python_CV_OCR/__pycache__
+Python_CV_OCR/output
+output

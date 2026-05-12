@@ -47,14 +47,16 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public Response<String> register(RegistrationRequest request) {
-        log.info("Starting user registration for email: {}", request.getEmail());
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        log.info("Starting user registration for email: {}", normalizedEmail);
 
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            log.warn("Registration failed: email already exists - {}", request.getEmail());
+        if (userRepository.findByEmail(normalizedEmail).isPresent()) {
+            log.warn("Registration failed: email already exists - {}", normalizedEmail);
             throw new BadRequestException("Email already exists");
         }
 
         User user = userMapper.toUserEntity(request);
+        user.setEmail(normalizedEmail);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
 
         User savedUser = userRepository.save(user);
@@ -150,6 +152,20 @@ public class AuthServiceImpl implements AuthService {
             log.error("Token refresh failed: {}", e.getMessage(), e);
             throw new BadRequestException("Invalid or expired refresh token: " + e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Response<LoginResponse> getCurrentUserProfile() {
+        User currentUser = getCurrentUser();
+        LoginResponse loginResponse = userMapper.toLoginResponse(currentUser, null, null);
+        loginResponse.setMessage("Authenticated user loaded successfully");
+
+        return Response.<LoginResponse>builder()
+                .success(true)
+                .message("Authenticated user loaded successfully")
+                .data(loginResponse)
+                .build();
     }
 
     @Override
@@ -268,6 +284,15 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
+    @Override
+    public Response<String> logout() {
+        return Response.<String>builder()
+                .success(true)
+                .message("Logout successful")
+                .data("Logout successful")
+                .build();
+    }
+
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
@@ -276,5 +301,12 @@ public class AuthServiceImpl implements AuthService {
 
         return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new NotFoundException("Authenticated user not found"));
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        return email.trim().toLowerCase();
     }
 }

@@ -105,7 +105,8 @@ public class TokenService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = getUsernameFromToken(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        final String type = findTypeofToken(token);
+        return ("ACCESS".equals(type) && username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
     public boolean isRefreshTokenValid(String token, UserDetails userDetails) {

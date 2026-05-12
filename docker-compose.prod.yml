@@ -1,0 +1,123 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: skanproverka-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-scanner_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-scanner_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: skanproverka-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USER:-scanner}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASS:-scanner_pass}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    image: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/skanproverka-backend:latest
+    container_name: skanproverka-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-scanner_db}
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: ${RABBIT_USER:-scanner}
+      RABBIT_PASS: ${RABBIT_PASS:-scanner_pass}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JPA_SHOW_SQL: ${JPA_SHOW_SQL:-false}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-465}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      APP_MAIL_FROM: ${APP_MAIL_FROM}
+      APP_MAIL_NAME: ${APP_MAIL_NAME:-СканПроверка}
+      APP_SUPPORT_EMAIL: ${APP_SUPPORT_EMAIL}
+      APP_PARTNERSHIP_EMAIL: ${APP_PARTNERSHIP_EMAIL}
+      APP_SITE_COMPANY_NAME: ${APP_SITE_COMPANY_NAME:-Галлаб Абдулла}
+      APP_ALLOWED_ORIGINS: ${APP_ALLOWED_ORIGINS:-https://your-domain.example}
+      APP_AUTH_COOKIE_SAME_SITE: ${APP_AUTH_COOKIE_SAME_SITE:-Lax}
+      APP_AUTH_COOKIE_FORCE_SECURE: ${APP_AUTH_COOKIE_FORCE_SECURE:-true}
+      APP_AUTH_COOKIE_DOMAIN: ${APP_AUTH_COOKIE_DOMAIN:-}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL}
+      BACKEND_PUBLIC_BASE_URL: ${BACKEND_PUBLIC_BASE_URL}
+      SCAN_STORAGE_ROOT: /app/storage/scans
+      PYTHON_OCR_OUTPUT_ROOT: /opt/python_cv_ocr/output
+      PYTHON_CMD: python3
+      PYTHON_PROJECT_DIR: /opt/python_cv_ocr
+      SERVER_PORT: 8080
+    volumes:
+      - scans_storage:/app/storage/scans
+      - ocr_output:/opt/python_cv_ocr/output
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  ocr-worker:
+    image: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/skanproverka-ocr-worker:latest
+    container_name: skanproverka-ocr-worker
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: ${RABBIT_USER:-scanner}
+      RABBIT_PASS: ${RABBIT_PASS:-scanner_pass}
+      SCAN_EXCHANGE: ${SCAN_EXCHANGE:-scan.exchange}
+      SCAN_REQUEST_QUEUE: ${SCAN_REQUEST_QUEUE:-scan.ocr.request.queue}
+      SCAN_REQUEST_ROUTING_KEY: ${SCAN_REQUEST_ROUTING_KEY:-scan.ocr.requested}
+      SCAN_RESULT_QUEUE: ${SCAN_RESULT_QUEUE:-scan.ocr.result.queue}
+      SCAN_RESULT_ROUTING_KEY: ${SCAN_RESULT_ROUTING_KEY:-scan.ocr.completed}
+      OCR_PROCESSING_TIMEOUT: ${OCR_PROCESSING_TIMEOUT:-1800}
+    volumes:
+      - scans_storage:/app/storage/scans
+      - ocr_output:/app/output
+    restart: unless-stopped
+
+  frontend:
+    image: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/skanproverka-frontend:latest
+    container_name: skanproverka-frontend
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: skanproverka-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup --interval ${WATCHTOWER_POLL_INTERVAL:-60} skanproverka-frontend skanproverka-backend skanproverka-ocr-worker
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  scans_storage:
+  ocr_output:

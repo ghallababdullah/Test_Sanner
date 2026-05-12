@@ -3,6 +3,7 @@ package com.Ghallab.dev.Test_Scanner_backend.scan.domain.service;
 import com.Ghallab.dev.Test_Scanner_backend.auth.domain.entity.User;
 import com.Ghallab.dev.Test_Scanner_backend.auth.domain.repository.UserRepository;
 import com.Ghallab.dev.Test_Scanner_backend.common.Response.Response;
+import com.Ghallab.dev.Test_Scanner_backend.common.exceptions.BadRequestException;
 import com.Ghallab.dev.Test_Scanner_backend.common.exceptions.NotFoundException;
 import com.Ghallab.dev.Test_Scanner_backend.result.domain.entity.StudentAnswer;
 import com.Ghallab.dev.Test_Scanner_backend.result.domain.entity.TestResult;
@@ -67,6 +68,7 @@ public class ScanServiceImpl implements ScanService {
     private final UserRepository userRepository;
     private final ScanMapper scanMapper;
     private final ScanFileStorageService scanFileStorageService;
+    private final ScanImageValidationService scanImageValidationService;
     private final ScanJobPublisher scanJobPublisher;
     private final ScanPreviewService scanPreviewService;
     private final ScannedBlankResultService scannedBlankResultService;
@@ -132,6 +134,7 @@ public class ScanServiceImpl implements ScanService {
             if (image == null || image.isEmpty()) {
                 return Response.error("Scanned image is required", 400);
             }
+            scanImageValidationService.validate(image);
 
             log.info("Submitting scanned blank image for test: {}, file: {}",
                     request.getTestId(),
@@ -174,6 +177,9 @@ public class ScanServiceImpl implements ScanService {
         } catch (NotFoundException e) {
             log.error("Not found error: {}", e.getMessage());
             return Response.error(e.getMessage(), 404);
+        } catch (BadRequestException e) {
+            log.warn("Validation error while submitting scanned blank: {}", e.getMessage());
+            return Response.error(e.getMessage(), 400);
         } catch (IOException e) {
             log.error("Error storing scanned image", e);
             return Response.error("Failed to store scanned image: " + e.getMessage(), 500);
@@ -271,6 +277,7 @@ public class ScanServiceImpl implements ScanService {
             if (image == null || image.isEmpty()) {
                 return Response.error("Scanned image is required", 400);
             }
+            scanImageValidationService.validate(image);
 
             log.info("Submitting scanned blank image for ROI preview only, test: {}, file: {}",
                     request.getTestId(),
@@ -305,6 +312,9 @@ public class ScanServiceImpl implements ScanService {
         } catch (NotFoundException e) {
             log.error("Not found error: {}", e.getMessage());
             return Response.error(e.getMessage(), 404);
+        } catch (BadRequestException e) {
+            log.warn("Validation error while submitting preview blank: {}", e.getMessage());
+            return Response.error(e.getMessage(), 400);
         } catch (IOException e) {
             log.error("Error storing scanned image", e);
             return Response.error("Failed to store scanned image: " + e.getMessage(), 500);

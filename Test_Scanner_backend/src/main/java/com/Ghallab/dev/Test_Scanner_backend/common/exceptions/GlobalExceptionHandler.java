@@ -4,8 +4,11 @@ package com.Ghallab.dev.Test_Scanner_backend.common.exceptions;
 import com.Ghallab.dev.Test_Scanner_backend.common.Response.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import java.util.stream.Collectors;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -38,6 +41,32 @@ public class GlobalExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(response , HttpStatus.BAD_REQUEST)  ;
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Response<?>> handleValidationException(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> error.getDefaultMessage() == null ? error.getField() : error.getDefaultMessage())
+                .collect(Collectors.joining(". "));
+
+        Response<?> response = Response.builder()
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .message(message.isBlank() ? "Validation failed" : message)
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<Response<?>> handleTooManyRequestsException(TooManyRequestsException ex) {
+        Response<?> response = Response.builder()
+                .statusCode(HttpStatus.TOO_MANY_REQUESTS.value())
+                .message(ex.getMessage())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.TOO_MANY_REQUESTS);
     }
 }
 

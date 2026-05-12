@@ -99,6 +99,32 @@ function buildCapturedFile(blob: Blob) {
   );
 }
 
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
+
+function validateSelectedFiles(files: File[]) {
+  for (const file of files) {
+    const normalizedName = file.name.toLowerCase();
+    const hasAllowedExtension = ALLOWED_IMAGE_EXTENSIONS.some((extension) => normalizedName.endsWith(extension));
+    const hasAllowedMimeType = ALLOWED_IMAGE_TYPES.has(file.type);
+
+    if (!hasAllowedExtension || !hasAllowedMimeType) {
+      return `Файл "${file.name}" не похож на поддерживаемое изображение. Разрешены только JPG, PNG и WEBP.`;
+    }
+
+    if (file.size <= 0) {
+      return `Файл "${file.name}" пустой и не может быть загружен.`;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      return `Файл "${file.name}" слишком большой. Максимальный размер: 20 МБ.`;
+    }
+  }
+
+  return null;
+}
+
 function statusLabel(status: QueueStatus) {
   switch (status) {
     case "uploading":
@@ -293,6 +319,7 @@ export function ScanSessionsPage() {
   const [queueItems, setQueueItems] = useState<QueuedBlank[]>([]);
   const [session, setSession] = useState<ScanSessionResponse | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [queueValidationError, setQueueValidationError] = useState<string | null>(null);
   const [cameraStatus, setCameraStatus] = useState("Откройте камеру и расположите лист внутри рамки A4.");
   const [isCameraReady, setIsCameraReady] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -539,7 +566,14 @@ export function ScanSessionsPage() {
     if (!files || files.length === 0) {
       return;
     }
-    setQueueItems((current) => [...current, ...buildQueueItems(Array.from(files), source)]);
+    const nextFiles = Array.from(files);
+    const validationError = validateSelectedFiles(nextFiles);
+    if (validationError) {
+      setQueueValidationError(validationError);
+      return;
+    }
+    setQueueValidationError(null);
+    setQueueItems((current) => [...current, ...buildQueueItems(nextFiles, source)]);
     if (source === "camera") {
       setCameraStatus("Снимок добавлен. Можно сделать ещё один или отправить очередь.");
     }
@@ -579,6 +613,12 @@ export function ScanSessionsPage() {
         return;
       }
       const file = buildCapturedFile(blob);
+      const validationError = validateSelectedFiles([file]);
+      if (validationError) {
+        setQueueValidationError(validationError);
+        return;
+      }
+      setQueueValidationError(null);
       setQueueItems((current) => [...current, ...buildQueueItems([file], "camera")]);
       setCameraError(null);
       setCameraStatus("Снимок добавлен в очередь. При необходимости снимите ещё один бланк.");
@@ -611,6 +651,10 @@ export function ScanSessionsPage() {
         <Alert severity="error">
           {explainScanRequestError(uploadMutation.error)}
         </Alert>
+      ) : null}
+
+      {queueValidationError ? (
+        <Alert severity="warning">{queueValidationError}</Alert>
       ) : null}
 
       {uploadMutation.isSuccess && queueItems.length === 0 ? (

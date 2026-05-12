@@ -23,6 +23,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class AuthFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;
+    private final AuthCookieService authCookieService;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomUserDetailsService customUserDetailsService;
 
@@ -81,6 +82,11 @@ public class AuthFilter extends OncePerRequestFilter {
 
 
     private String getTokenFromRequest(HttpServletRequest request) {
+        String cookieToken = authCookieService.extractAccessToken(request);
+        if (cookieToken != null && !cookieToken.isBlank()) {
+            return cookieToken;
+        }
+
         String tokenWithBearer = request.getHeader("Authorization");
         if (tokenWithBearer != null && tokenWithBearer.startsWith("Bearer ")) {
             return tokenWithBearer.substring(7);

@@ -7,6 +7,16 @@ export async function loginRequest(payload: LoginRequest) {
   return data.data;
 }
 
+export async function getCurrentUserRequest() {
+  const { data } = await http.get<ApiResponse<LoginResponse>>("/auth/me");
+  return data.data;
+}
+
+export async function logoutRequest() {
+  const { data } = await http.post<ApiResponse<string>>("/auth/logout");
+  return data.data;
+}
+
 export async function registerRequest(payload: RegisterRequest) {
   const { data } = await http.post<ApiResponse<string>>("/auth/register", payload);
   return data;

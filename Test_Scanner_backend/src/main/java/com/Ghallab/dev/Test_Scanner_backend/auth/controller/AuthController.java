@@ -1,6 +1,7 @@
 package com.Ghallab.dev.Test_Scanner_backend.auth.controller;
 
 import com.Ghallab.dev.Test_Scanner_backend.auth.domain.service.AuthService;
+import com.Ghallab.dev.Test_Scanner_backend.auth.security.AuthCookieService;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.ChangePasswordRequest;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.LoginRequest;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.LoginResponse;
@@ -8,6 +9,8 @@ import com.Ghallab.dev.Test_Scanner_backend.auth.dto.RegistrationRequest;
 import com.Ghallab.dev.Test_Scanner_backend.auth.dto.ResetPasswordRequest;
 import com.Ghallab.dev.Test_Scanner_backend.common.Response.Response;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 public class AuthController {
 
     private final AuthService authService;
+    private final AuthCookieService authCookieService;
 
     @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
@@ -43,16 +47,45 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Response<LoginResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<Response<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest loginRequest,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
         log.info("Login endpoint called for email: {}", loginRequest.getEmail());
-        Response<LoginResponse> response = authService.login(loginRequest);
-        return ResponseEntity.ok(response);
+        Response<LoginResponse> authResponse = authService.login(loginRequest);
+        String accessToken = authResponse.getData().getAccessToken();
+        String refreshToken = authResponse.getData().getRefreshToken();
+        authCookieService.setAuthCookies(request, response, accessToken, refreshToken);
+        authResponse.getData().setAccessToken(null);
+        authResponse.getData().setRefreshToken(null);
+        return ResponseEntity.ok(authResponse);
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<Response<LoginResponse>> refreshToken(@RequestParam String refreshToken) {
+    public ResponseEntity<Response<LoginResponse>> refreshToken(
+            @RequestParam(required = false) String refreshToken,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
         log.info("Refresh token endpoint called");
-        Response<LoginResponse> response = authService.refreshToken(refreshToken);
+        String tokenValue = refreshToken;
+        if (tokenValue == null || tokenValue.isBlank()) {
+            tokenValue = authCookieService.extractRefreshToken(request);
+        }
+        Response<LoginResponse> authResponse = authService.refreshToken(tokenValue);
+        String accessToken = authResponse.getData().getAccessToken();
+        String nextRefreshToken = authResponse.getData().getRefreshToken();
+        authCookieService.setAuthCookies(request, response, accessToken, nextRefreshToken);
+        authResponse.getData().setAccessToken(null);
+        authResponse.getData().setRefreshToken(null);
+        return ResponseEntity.ok(authResponse);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<Response<LoginResponse>> me() {
+        log.info("Current user endpoint called");
+        Response<LoginResponse> response = authService.getCurrentUserProfile();
         return ResponseEntity.ok(response);
     }
 
@@ -96,5 +129,12 @@ public class AuthController {
         log.info("Change password endpoint called");
         Response<String> response = authService.changePassword(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Response<String>> logout(HttpServletRequest request, HttpServletResponse response) {
+        log.info("Logout endpoint called");
+        authCookieService.clearAuthCookies(request, response);
+        return ResponseEntity.ok(authService.logout());
     }
 }

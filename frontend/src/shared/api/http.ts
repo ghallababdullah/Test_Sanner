@@ -1,7 +1,8 @@
 import axios from "axios";
 import type { ApiResponse } from "../types/api";
 import type { LoginResponse } from "../types/auth";
-import { clearAuthTokens, getAccessToken, getRefreshToken, setAuthTokens } from "./tokenStorage";
+
+const AUTH_SESSION_EXPIRED_EVENT = "auth:session-expired";
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 
@@ -20,48 +21,30 @@ function resolveApiBaseUrl() {
 const API_BASE_URL = resolveApiBaseUrl();
 
 export const http = axios.create({
-  baseURL: API_BASE_URL
+  baseURL: API_BASE_URL,
+  withCredentials: true
 });
 
 let isRefreshing = false;
-let refreshPromise: Promise<string> | null = null;
+let refreshPromise: Promise<void> | null = null;
 
 async function refreshAccessToken() {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) {
-    throw new Error("Refresh token not found");
-  }
-
-  const { data } = await axios.post<ApiResponse<LoginResponse>>(
+  await axios.post<ApiResponse<LoginResponse>>(
     `${API_BASE_URL}/auth/refresh-token`,
     null,
-    { params: { refreshToken } }
+    { withCredentials: true }
   );
-
-  const payload = data.data;
-  setAuthTokens({
-    accessToken: payload.accessToken,
-    refreshToken: payload.refreshToken,
-    email: payload.email,
-    fullName: `${payload.firstName} ${payload.lastName}`.trim()
-  });
-
-  return payload.accessToken;
 }
-
-http.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
 
 http.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status !== 401 || originalRequest?._retry) {
+    const requestUrl = originalRequest?.url ?? "";
+    const isRefreshRequest = typeof requestUrl === "string" && requestUrl.includes("/auth/refresh-token");
+    const isLoginRequest = typeof requestUrl === "string" && requestUrl.includes("/auth/login");
+
+    if (error.response?.status !== 401 || originalRequest?._retry || isRefreshRequest || isLoginRequest) {
       return Promise.reject(error);
     }
 
@@ -75,13 +58,15 @@ http.interceptors.response.use(
     }
 
     try {
-      const nextAccessToken = await refreshPromise;
-      originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
+      await refreshPromise;
       return http(originalRequest);
     } catch (refreshError) {
-      clearAuthTokens();
-      window.location.href = "/login";
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event(AUTH_SESSION_EXPIRED_EVENT));
+      }
       return Promise.reject(refreshError);
     }
   }
 );
+
+export { AUTH_SESSION_EXPIRED_EVENT };

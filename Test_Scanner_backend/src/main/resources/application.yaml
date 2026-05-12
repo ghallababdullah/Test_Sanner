@@ -15,14 +15,14 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/scanner_db}
     username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:051020}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: ${JPA_SHOW_SQL:false}
     open-in-view: false
     properties:
       hibernate:
@@ -34,7 +34,7 @@ spring:
 
   jwt:
     secret:
-      string: abdullah4u12345abdullah4u12345abdullah4u12345
+      string: ${JWT_SECRET}
     expiration:
       time: 86400000
 
@@ -83,6 +83,16 @@ app:
     base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
   backend:
     public-base-url: ${BACKEND_PUBLIC_BASE_URL:http://localhost:8080}
+  auth:
+    cookies:
+      access-token-name: ${APP_AUTH_ACCESS_COOKIE_NAME:skanproverka_access_token}
+      refresh-token-name: ${APP_AUTH_REFRESH_COOKIE_NAME:skanproverka_refresh_token}
+      same-site: ${APP_AUTH_COOKIE_SAME_SITE:Lax}
+      domain: ${APP_AUTH_COOKIE_DOMAIN:}
+      force-secure: ${APP_AUTH_COOKIE_FORCE_SECURE:false}
+  security:
+    cors:
+      allowed-origins: ${APP_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,https://localhost:5173,https://127.0.0.1:5173}
   scan:
     storage:
       root-dir: ${SCAN_STORAGE_ROOT:./storage/scans}

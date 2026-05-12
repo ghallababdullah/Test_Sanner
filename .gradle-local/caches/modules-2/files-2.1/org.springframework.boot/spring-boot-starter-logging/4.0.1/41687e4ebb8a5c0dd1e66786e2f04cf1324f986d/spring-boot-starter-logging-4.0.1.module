@@ -1,0 +1,146 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.springframework.boot",
+    "module": "spring-boot-starter-logging",
+    "version": "4.0.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.2.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "ch.qos.logback",
+          "module": "logback-classic",
+          "version": {
+            "requires": "1.5.22"
+          }
+        },
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-to-slf4j",
+          "version": {
+            "requires": "2.25.3"
+          }
+        },
+        {
+          "group": "org.slf4j",
+          "module": "jul-to-slf4j",
+          "version": {
+            "requires": "2.0.17"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-boot-starter-logging-4.0.1.jar",
+          "url": "spring-boot-starter-logging-4.0.1.jar",
+          "size": 4742,
+          "sha512": "2fc97bee04ff1a0ff1f284a753a06bd99a95016576a9214487ba57d40686ba2a5ba0a3d9e8ad0b0367851e946e1b3ef0d1d75ff9ee9961a50333d3a6b9aa93b4",
+          "sha256": "dc804995968d927818235a87ac38de1f335fed84b7f57c4b5cb3edc9f5a948c0",
+          "sha1": "95b39c11a1a69a48ababef38c9a415f25fead87b",
+          "md5": "e4aef35a2c73cb6de0a32245476b7673"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "ch.qos.logback",
+          "module": "logback-classic",
+          "version": {
+            "requires": "1.5.22"
+          }
+        },
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-to-slf4j",
+          "version": {
+            "requires": "2.25.3"
+          }
+        },
+        {
+          "group": "org.slf4j",
+          "module": "jul-to-slf4j",
+          "version": {
+            "requires": "2.0.17"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-boot-starter-logging-4.0.1.jar",
+          "url": "spring-boot-starter-logging-4.0.1.jar",
+          "size": 4742,
+          "sha512": "2fc97bee04ff1a0ff1f284a753a06bd99a95016576a9214487ba57d40686ba2a5ba0a3d9e8ad0b0367851e946e1b3ef0d1d75ff9ee9961a50333d3a6b9aa93b4",
+          "sha256": "dc804995968d927818235a87ac38de1f335fed84b7f57c4b5cb3edc9f5a948c0",
+          "sha1": "95b39c11a1a69a48ababef38c9a415f25fead87b",
+          "md5": "e4aef35a2c73cb6de0a32245476b7673"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-boot-starter-logging-4.0.1-javadoc.jar",
+          "url": "spring-boot-starter-logging-4.0.1-javadoc.jar",
+          "size": 4742,
+          "sha512": "2fc97bee04ff1a0ff1f284a753a06bd99a95016576a9214487ba57d40686ba2a5ba0a3d9e8ad0b0367851e946e1b3ef0d1d75ff9ee9961a50333d3a6b9aa93b4",
+          "sha256": "dc804995968d927818235a87ac38de1f335fed84b7f57c4b5cb3edc9f5a948c0",
+          "sha1": "95b39c11a1a69a48ababef38c9a415f25fead87b",
+          "md5": "e4aef35a2c73cb6de0a32245476b7673"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-boot-starter-logging-4.0.1-sources.jar",
+          "url": "spring-boot-starter-logging-4.0.1-sources.jar",
+          "size": 4742,
+          "sha512": "2fc97bee04ff1a0ff1f284a753a06bd99a95016576a9214487ba57d40686ba2a5ba0a3d9e8ad0b0367851e946e1b3ef0d1d75ff9ee9961a50333d3a6b9aa93b4",
+          "sha256": "dc804995968d927818235a87ac38de1f335fed84b7f57c4b5cb3edc9f5a948c0",
+          "sha1": "95b39c11a1a69a48ababef38c9a415f25fead87b",
+          "md5": "e4aef35a2c73cb6de0a32245476b7673"
+        }
+      ]
+    }
+  ]
+}

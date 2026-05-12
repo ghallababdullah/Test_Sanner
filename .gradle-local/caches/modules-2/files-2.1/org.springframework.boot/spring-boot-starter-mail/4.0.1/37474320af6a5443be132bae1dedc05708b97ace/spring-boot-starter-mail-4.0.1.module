@@ -1,0 +1,132 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.springframework.boot",
+    "module": "spring-boot-starter-mail",
+    "version": "4.0.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.2.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.springframework.boot",
+          "module": "spring-boot-starter",
+          "version": {
+            "requires": "4.0.1"
+          }
+        },
+        {
+          "group": "org.springframework.boot",
+          "module": "spring-boot-mail",
+          "version": {
+            "requires": "4.0.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-boot-starter-mail-4.0.1.jar",
+          "url": "spring-boot-starter-mail-4.0.1.jar",
+          "size": 4773,
+          "sha512": "1365b1f8b7d29c44846e112e75de4102048032a6638d2796c714ef022f3e29b34b719bd46f3db3c14d59c88e807813c4ad7c60cb15aedf2948e0675a5cf1eeed",
+          "sha256": "74552670212b0287d69984b1fb655c0a98b73f511296d3dfac7283982fa223c7",
+          "sha1": "11fa25bbceb1a3930b4e9f7c00c14acc3318d11a",
+          "md5": "f7cceb0c65da6b425e9f049ba0a7c6ce"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.springframework.boot",
+          "module": "spring-boot-starter",
+          "version": {
+            "requires": "4.0.1"
+          }
+        },
+        {
+          "group": "org.springframework.boot",
+          "module": "spring-boot-mail",
+          "version": {
+            "requires": "4.0.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-boot-starter-mail-4.0.1.jar",
+          "url": "spring-boot-starter-mail-4.0.1.jar",
+          "size": 4773,
+          "sha512": "1365b1f8b7d29c44846e112e75de4102048032a6638d2796c714ef022f3e29b34b719bd46f3db3c14d59c88e807813c4ad7c60cb15aedf2948e0675a5cf1eeed",
+          "sha256": "74552670212b0287d69984b1fb655c0a98b73f511296d3dfac7283982fa223c7",
+          "sha1": "11fa25bbceb1a3930b4e9f7c00c14acc3318d11a",
+          "md5": "f7cceb0c65da6b425e9f049ba0a7c6ce"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-boot-starter-mail-4.0.1-javadoc.jar",
+          "url": "spring-boot-starter-mail-4.0.1-javadoc.jar",
+          "size": 4773,
+          "sha512": "1365b1f8b7d29c44846e112e75de4102048032a6638d2796c714ef022f3e29b34b719bd46f3db3c14d59c88e807813c4ad7c60cb15aedf2948e0675a5cf1eeed",
+          "sha256": "74552670212b0287d69984b1fb655c0a98b73f511296d3dfac7283982fa223c7",
+          "sha1": "11fa25bbceb1a3930b4e9f7c00c14acc3318d11a",
+          "md5": "f7cceb0c65da6b425e9f049ba0a7c6ce"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-boot-starter-mail-4.0.1-sources.jar",
+          "url": "spring-boot-starter-mail-4.0.1-sources.jar",
+          "size": 4773,
+          "sha512": "1365b1f8b7d29c44846e112e75de4102048032a6638d2796c714ef022f3e29b34b719bd46f3db3c14d59c88e807813c4ad7c60cb15aedf2948e0675a5cf1eeed",
+          "sha256": "74552670212b0287d69984b1fb655c0a98b73f511296d3dfac7283982fa223c7",
+          "sha1": "11fa25bbceb1a3930b4e9f7c00c14acc3318d11a",
+          "md5": "f7cceb0c65da6b425e9f049ba0a7c6ce"
+        }
+      ]
+    }
+  ]
+}

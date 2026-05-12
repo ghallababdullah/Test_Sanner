@@ -129,9 +129,10 @@ export function PublicHeader() {
                     Профиль
                   </MenuItem>
                   <MenuItem
-                    onClick={() => {
+                    onClick={async () => {
                       setMenuAnchor(null);
-                      logout();
+                      await logout();
+                      navigate("/login");
                     }}
                   >
                     Выйти
@@ -174,9 +175,10 @@ export function PublicHeader() {
                   Профиль
                 </MenuItem>
                 <MenuItem
-                  onClick={() => {
+                  onClick={async () => {
                     setMenuAnchor(null);
-                    logout();
+                    await logout();
+                    navigate("/login");
                   }}
                 >
                   Выйти

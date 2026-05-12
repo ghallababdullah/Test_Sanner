@@ -22,13 +22,18 @@ public class ScanPreviewService {
 
     public String generatePreviewAndCopyArtifacts(String originalImagePath, ScanFileStorageService storageService) {
         try {
-            Path repoRoot = Path.of("").toAbsolutePath().normalize().getParent();
-            if (repoRoot == null) {
-                throw new IllegalStateException("Failed to resolve repository root");
-            }
-
             String pythonCommand = System.getenv().getOrDefault("PYTHON_CMD", "python");
-            Path pythonProjectDir = repoRoot.resolve("Python_CV_OCR").normalize();
+            String configuredProjectDir = System.getenv("PYTHON_PROJECT_DIR");
+            Path pythonProjectDir;
+            if (configuredProjectDir != null && !configuredProjectDir.isBlank()) {
+                pythonProjectDir = Path.of(configuredProjectDir).toAbsolutePath().normalize();
+            } else {
+                Path repoRoot = Path.of("").toAbsolutePath().normalize().getParent();
+                if (repoRoot == null) {
+                    throw new IllegalStateException("Failed to resolve repository root");
+                }
+                pythonProjectDir = repoRoot.resolve("Python_CV_OCR").normalize();
+            }
             Path scriptPath = pythonProjectDir.resolve("roi_preview.py").normalize();
 
             List<String> command = new ArrayList<>();

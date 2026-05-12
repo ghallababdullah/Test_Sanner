@@ -1,43 +1,40 @@
 package com.Ghallab.dev.Test_Scanner_backend.auth.security;
 
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Configuration
 public class CorsConfig {
+
+    @Value("${app.security.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,https://localhost:5173,https://127.0.0.1:5173}")
+    private String allowedOrigins;
 
     @Bean
     public CorsFilter corsFilter(){
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
-        // Local development for browser and phone in the same network
-        config.addAllowedOriginPattern("http://localhost:5173");
-        config.addAllowedOriginPattern("http://127.0.0.1:5173");
-        config.addAllowedOriginPattern("http://192.168.56.1:5173");
-        config.addAllowedOriginPattern("http://192.168.0.17:5173");
-        config.addAllowedOriginPattern("https://localhost:5173");
-        config.addAllowedOriginPattern("https://127.0.0.1:5173");
-        config.addAllowedOriginPattern("https://192.168.56.1:5173");
-        config.addAllowedOriginPattern("https://192.168.0.17:5173");
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toList());
 
-        // Allow all headers
+        config.setAllowedOriginPatterns(origins);
+
         config.addAllowedHeader("*");
-
-        // Allow all methods (GET, POST, PUT, DELETE, etc.)
         config.addAllowedMethod("*");
-
-        // Allow credentials (cookies, authorization headers)
         config.setAllowCredentials(true);
-
-        // Cache preflight response for 1 hour
         config.setMaxAge(3600L);
-
-        // Apply to all endpoints
+        config.addExposedHeader("Set-Cookie");
         source.registerCorsConfiguration("/**", config);
 
         return new CorsFilter(source);

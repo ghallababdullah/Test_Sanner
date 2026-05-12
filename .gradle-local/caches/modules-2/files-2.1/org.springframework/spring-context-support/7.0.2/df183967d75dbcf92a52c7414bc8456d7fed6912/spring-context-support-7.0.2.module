@@ -1,0 +1,106 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.springframework",
+    "module": "spring-context-support",
+    "version": "7.0.2",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.2.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.springframework",
+          "module": "spring-beans",
+          "version": {
+            "requires": "7.0.2"
+          }
+        },
+        {
+          "group": "org.springframework",
+          "module": "spring-context",
+          "version": {
+            "requires": "7.0.2"
+          }
+        },
+        {
+          "group": "org.springframework",
+          "module": "spring-core",
+          "version": {
+            "requires": "7.0.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-context-support-7.0.2.jar",
+          "url": "spring-context-support-7.0.2.jar",
+          "size": 177710,
+          "sha512": "f650345712249843c09e7dec76a998c7abfc42339a55f617b0482864e9a2d04ccb247fc998aa2f9939f695bd3b1dfd8d691132ea477b641c8bafd95992c1c751",
+          "sha256": "227d728768076866e2b8c729753b87ad9ac373374afe0b5bad7f06ecb229c3a7",
+          "sha1": "730eb28d537512cfc1a2550d5b9e0c1045e55c16",
+          "md5": "3c443c8873e9ed5eaea182c8dcdc39d1"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.springframework",
+          "module": "spring-beans",
+          "version": {
+            "requires": "7.0.2"
+          }
+        },
+        {
+          "group": "org.springframework",
+          "module": "spring-context",
+          "version": {
+            "requires": "7.0.2"
+          }
+        },
+        {
+          "group": "org.springframework",
+          "module": "spring-core",
+          "version": {
+            "requires": "7.0.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-context-support-7.0.2.jar",
+          "url": "spring-context-support-7.0.2.jar",
+          "size": 177710,
+          "sha512": "f650345712249843c09e7dec76a998c7abfc42339a55f617b0482864e9a2d04ccb247fc998aa2f9939f695bd3b1dfd8d691132ea477b641c8bafd95992c1c751",
+          "sha256": "227d728768076866e2b8c729753b87ad9ac373374afe0b5bad7f06ecb229c3a7",
+          "sha1": "730eb28d537512cfc1a2550d5b9e0c1045e55c16",
+          "md5": "3c443c8873e9ed5eaea182c8dcdc39d1"
+        }
+      ]
+    }
+  ]
+}

@@ -6,3 +6,5 @@ Test_Scanner_backend/.gradle-home-analytics/
 Test_Scanner_backend/.env
 frontend/.env
 frontend/.cert/
+.env.production
+.env.production.local
