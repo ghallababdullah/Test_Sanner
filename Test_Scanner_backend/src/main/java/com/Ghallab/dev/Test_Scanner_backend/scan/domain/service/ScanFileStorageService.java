@@ -22,6 +22,9 @@ import com.Ghallab.dev.Test_Scanner_backend.scan.domain.entity.ScannedBlank;
 public class ScanFileStorageService {
     private static final String ROI_OVERRIDES_FILENAME = "roi_overrides.json";
     private static final String OCR_RESULT_FILENAME = "ocr_result.json";
+    private static final String ALIGNED_FILENAME = "aligned.png";
+    private static final String ANNOTATED_RELATIVE_DIR = "detect_crops";
+    private static final String ANNOTATED_FILENAME = "_annotated.png";
 
     private final Path rootDir;
     private final boolean copyOcrArtifacts;
@@ -84,10 +87,15 @@ public class ScanFileStorageService {
         }
 
         deleteDirectoryIfExists(targetDir);
-        copyDirectory(sourceDir, targetDir);
+        Files.createDirectories(targetDir);
+        copyArtifactIfExists(sourceDir, targetDir, ALIGNED_FILENAME);
+        copyArtifactIfExists(sourceDir, targetDir, OCR_RESULT_FILENAME);
+        copyArtifactIfExists(sourceDir, targetDir, ROI_OVERRIDES_FILENAME);
+        copyArtifactIfExists(sourceDir, targetDir, ANNOTATED_RELATIVE_DIR, ANNOTATED_FILENAME);
 
-        Path alignedCopy = targetDir.resolve("aligned.png");
+        Path alignedCopy = targetDir.resolve(ALIGNED_FILENAME);
         if (Files.exists(alignedCopy)) {
+            deleteDirectoryIfExists(sourceDir);
             return alignedCopy.toString();
         }
 
@@ -127,18 +135,18 @@ public class ScanFileStorageService {
                 if (processed != null) {
                     yield processed;
                 }
-                Path storageAligned = resolveArtifactPath(blank.getOriginalImagePath(), "aligned.png");
+                Path storageAligned = resolveArtifactPath(blank.getOriginalImagePath(), ALIGNED_FILENAME);
                 if (storageAligned != null) {
                     yield storageAligned;
                 }
-                yield resolvePythonArtifactPath(blank, "aligned.png");
+                yield resolvePythonArtifactPath(blank, ALIGNED_FILENAME);
             }
             case "annotated" -> {
-                Path storageAnnotated = resolveArtifactPath(blank.getOriginalImagePath(), "detect_crops", "_annotated.png");
+                Path storageAnnotated = resolveArtifactPath(blank.getOriginalImagePath(), ANNOTATED_RELATIVE_DIR, ANNOTATED_FILENAME);
                 if (storageAnnotated != null) {
                     yield storageAnnotated;
                 }
-                yield resolvePythonArtifactPath(blank, "detect_crops", "_annotated.png");
+                yield resolvePythonArtifactPath(blank, ANNOTATED_RELATIVE_DIR, ANNOTATED_FILENAME);
             }
             case "thumbnail" -> normalizeIfExists(blank.getThumbnailPath());
             default -> null;
@@ -260,22 +268,26 @@ public class ScanFileStorageService {
         }
     }
 
-    private void copyDirectory(Path sourceDir, Path targetDir) throws IOException {
-        try (Stream<Path> walk = Files.walk(sourceDir)) {
-            for (Path sourcePath : walk.toList()) {
-                Path relativePath = sourceDir.relativize(sourcePath);
-                Path targetPath = targetDir.resolve(relativePath).normalize();
-                if (!targetPath.startsWith(targetDir)) {
-                    throw new IOException("Invalid OCR artifact copy path");
-                }
-                if (Files.isDirectory(sourcePath)) {
-                    Files.createDirectories(targetPath);
-                } else {
-                    Files.createDirectories(targetPath.getParent());
-                    Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                }
-            }
+    private void copyArtifactIfExists(Path sourceDir, Path targetDir, String... relativeParts) throws IOException {
+        Path sourcePath = sourceDir;
+        Path targetPath = targetDir;
+        for (String part : relativeParts) {
+            sourcePath = sourcePath.resolve(part);
+            targetPath = targetPath.resolve(part);
         }
+
+        sourcePath = sourcePath.normalize();
+        targetPath = targetPath.normalize();
+
+        if (!sourcePath.startsWith(sourceDir) || !targetPath.startsWith(targetDir)) {
+            throw new IOException("Invalid OCR artifact copy path");
+        }
+        if (!Files.exists(sourcePath) || !Files.isRegularFile(sourcePath)) {
+            return;
+        }
+
+        Files.createDirectories(targetPath.getParent());
+        Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
     }
 
     private void deleteFileIfExists(String pathValue) throws IOException {
