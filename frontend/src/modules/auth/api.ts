@@ -3,7 +3,11 @@ import type { ApiResponse } from "../../shared/types/api";
 import type { LoginRequest, LoginResponse, RegisterRequest } from "../../shared/types/auth";
 
 export async function loginRequest(payload: LoginRequest) {
-  const { data } = await http.post<ApiResponse<LoginResponse>>("/auth/login", payload);
+  const normalizedPayload = {
+    ...payload,
+    email: payload.email.trim().toLowerCase()
+  };
+  const { data } = await http.post<ApiResponse<LoginResponse>>("/auth/login", normalizedPayload);
   return data.data;
 }
 
@@ -23,7 +27,9 @@ export async function registerRequest(payload: RegisterRequest) {
 }
 
 export async function forgotPasswordRequest(email: string) {
-  const { data } = await http.post<ApiResponse<string>>("/auth/forget-password", null, { params: { email } });
+  const { data } = await http.post<ApiResponse<string>>("/auth/forget-password", null, {
+    params: { email: email.trim().toLowerCase() }
+  });
   return data.data;
 }
 

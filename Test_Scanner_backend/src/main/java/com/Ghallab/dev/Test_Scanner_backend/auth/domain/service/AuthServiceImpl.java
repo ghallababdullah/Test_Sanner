@@ -90,9 +90,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public Response<LoginResponse> login(LoginRequest loginRequest) {
-        log.info("User login attempt for email: {}", loginRequest.getEmail());
+        String normalizedEmail = normalizeEmail(loginRequest.getEmail());
+        log.info("User login attempt for email: {}", normalizedEmail);
 
-        User user = userRepository.findByEmail(loginRequest.getEmail())
+        User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new NotFoundException("Invalid email or password"));
 
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {
@@ -130,7 +131,7 @@ public class AuthServiceImpl implements AuthService {
             }
 
             String email = tokenService.getUsernameFromToken(refreshToken);
-            User user = userRepository.findByEmail(email)
+            User user = userRepository.findByEmail(normalizeEmail(email))
                     .orElseThrow(() -> new NotFoundException("User not found"));
 
             if (!user.isActive()) {
@@ -175,13 +176,14 @@ public class AuthServiceImpl implements AuthService {
 
         try {
             String email = tokenService.getUsernameFromToken(token);
-            User user = userRepository.findByEmail(email)
+            String normalizedEmail = normalizeEmail(email);
+            User user = userRepository.findByEmail(normalizedEmail)
                     .orElseThrow(() -> new NotFoundException("User not found"));
 
             user.setVerified(true);
             userRepository.save(user);
 
-            log.info("Email verified successfully for user: {}", email);
+            log.info("Email verified successfully for user: {}", normalizedEmail);
 
             return Response.<String>builder()
                     .success(true)
@@ -197,12 +199,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public Response<String> forgetPassword(String email) {
-        log.info("Password reset requested for email: {}", email);
+        String normalizedEmail = normalizeEmail(email);
+        log.info("Password reset requested for email: {}", normalizedEmail);
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        String passwordResetToken = tokenService.generatePasswordResetToken(email);
+        String passwordResetToken = tokenService.generatePasswordResetToken(normalizedEmail);
 
         Map<String, Object> templateVariables = new HashMap<>();
         templateVariables.put("firstName", user.getFirstName());
@@ -210,14 +213,14 @@ public class AuthServiceImpl implements AuthService {
         templateVariables.put("loginLink", frontendBaseUrl + "/login");
 
         NotificationDto resetEmail = NotificationDto.builder()
-                .recipient(email)
+                .recipient(normalizedEmail)
                 .title("Сброс пароля")
                 .templateName("password-reset")
                 .templateVariable(templateVariables)
                 .build();
 
         notificationService.sendEmailAsync(resetEmail);
-        log.info("Password reset email queued for: {}", email);
+        log.info("Password reset email queued for: {}", normalizedEmail);
 
         return Response.<String>builder()
                 .success(true)
@@ -233,7 +236,8 @@ public class AuthServiceImpl implements AuthService {
 
         try {
             String email = tokenService.validatePasswordResetToken(token);
-            User user = userRepository.findByEmail(email)
+            String normalizedEmail = normalizeEmail(email);
+            User user = userRepository.findByEmail(normalizedEmail)
                     .orElseThrow(() -> new NotFoundException("User not found"));
 
             if (!request.getNewPassword().equals(request.getConfirmPassword())) {
@@ -243,7 +247,7 @@ public class AuthServiceImpl implements AuthService {
             user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
             userRepository.save(user);
 
-            log.info("Password reset successfully for user: {}", email);
+            log.info("Password reset successfully for user: {}", normalizedEmail);
 
             return Response.<String>builder()
                     .success(true)
@@ -299,7 +303,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Authenticated user not found");
         }
 
-        return userRepository.findByEmail(authentication.getName())
+        return userRepository.findByEmail(normalizeEmail(authentication.getName()))
                 .orElseThrow(() -> new NotFoundException("Authenticated user not found"));
     }
 
