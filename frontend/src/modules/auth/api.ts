@@ -36,7 +36,7 @@ export async function forgotPasswordRequest(email: string) {
 export async function resetPasswordRequest(token: string, password: string, confirmPassword: string) {
   const { data } = await http.post<ApiResponse<string>>(
     "/auth/reset-password",
-    { password, confirmPassword },
+    { newPassword: password, confirmPassword },
     { params: { token } }
   );
   return data.data;
