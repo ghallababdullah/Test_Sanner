@@ -22,7 +22,13 @@ export async function logoutRequest() {
 }
 
 export async function registerRequest(payload: RegisterRequest) {
-  const { data } = await http.post<ApiResponse<string>>("/auth/register", payload);
+  const normalizedPayload = {
+    firstName: payload.firstName.trim(),
+    lastName: payload.lastName.trim(),
+    email: payload.email.trim().toLowerCase(),
+    password: payload.password
+  };
+  const { data } = await http.post<ApiResponse<string>>("/auth/register", normalizedPayload);
   return data;
 }
 

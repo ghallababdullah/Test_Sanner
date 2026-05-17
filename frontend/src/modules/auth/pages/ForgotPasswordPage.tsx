@@ -7,12 +7,17 @@ import { forgotPasswordRequest } from "../api";
 export function ForgotPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState("");
-  const { register, handleSubmit, formState: { isSubmitting }, setError } = useForm<{ email: string }>();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setError
+  } = useForm<{ email: string }>();
 
   const onSubmit = handleSubmit(async ({ email }) => {
     try {
       await forgotPasswordRequest(email);
-      setSubmittedEmail(email);
+      setSubmittedEmail(email.trim().toLowerCase());
       setSuccess(true);
     } catch {
       setError("root", { message: "Не удалось отправить письмо. Попробуйте ещё раз." });
@@ -31,11 +36,12 @@ export function ForgotPasswordPage() {
       ) : (
         <form onSubmit={onSubmit}>
           <Stack spacing={2}>
-            <TextField label="Email" {...register("email")} />
+            {errors.root ? <Alert severity="error">{errors.root.message}</Alert> : null}
+            <TextField label="Электронная почта" {...register("email")} />
             <Button type="submit" variant="contained" disabled={isSubmitting}>
               Отправить ссылку
             </Button>
-            <Alert severity="info">Введите email, и система отправит письмо для восстановления доступа.</Alert>
+            <Alert severity="info">Введите адрес электронной почты, и система отправит письмо для восстановления доступа.</Alert>
           </Stack>
         </form>
       )}

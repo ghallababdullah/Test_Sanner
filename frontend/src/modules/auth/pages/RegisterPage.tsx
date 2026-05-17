@@ -15,8 +15,8 @@ const schema = z
       .string()
       .trim()
       .toLowerCase()
-      .email("Введите корректный email")
-      .regex(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/, "Введите email в формате name@example.com"),
+      .email("Введите корректный адрес электронной почты")
+      .regex(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/, "Введите адрес в формате name@example.com"),
     password: z.string().min(6, "Минимум 6 символов"),
     confirmPassword: z.string().min(6, "Минимум 6 символов")
   })
@@ -74,7 +74,12 @@ export function RegisterPage() {
 
             <TextField label="Имя" {...register("firstName")} error={!!errors.firstName} helperText={errors.firstName?.message} />
             <TextField label="Фамилия" {...register("lastName")} error={!!errors.lastName} helperText={errors.lastName?.message} />
-            <TextField label="Email" {...register("email")} error={!!errors.email} helperText={errors.email?.message} />
+            <TextField
+              label="Электронная почта"
+              {...register("email")}
+              error={!!errors.email}
+              helperText={errors.email?.message}
+            />
             <TextField label="Пароль" type="password" {...register("password")} error={!!errors.password} helperText={errors.password?.message} />
             <TextField
               label="Повторите пароль"

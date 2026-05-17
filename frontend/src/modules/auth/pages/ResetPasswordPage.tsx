@@ -23,6 +23,7 @@ export function ResetPasswordPage() {
 
   const onSubmit = handleSubmit(async ({ password, confirmPassword }) => {
     if (password !== confirmPassword) {
+      setError("root", { message: "Пароли не совпадают." });
       return;
     }
 
@@ -31,7 +32,7 @@ export function ResetPasswordPage() {
       setSuccess(true);
     } catch {
       setError("root", {
-        message: "Could not save the new password. Please check the reset link and try again."
+        message: "Не удалось сохранить новый пароль. Проверьте ссылку и попробуйте ещё раз."
       });
     }
   });
@@ -40,19 +41,19 @@ export function ResetPasswordPage() {
     <AuthShell>
       {success ? (
         <Stack spacing={2}>
-          <Alert severity="success">Password changed successfully.</Alert>
+          <Alert severity="success">Пароль успешно изменён.</Alert>
           <Typography color="text.secondary">
-            You can now sign in with your new password.
+            Теперь можно войти в систему с новым паролем.
           </Typography>
           <Button component={Link} to="/login" variant="contained">
-            Go to sign in
+            Перейти ко входу
           </Button>
         </Stack>
       ) : (
         <form onSubmit={onSubmit}>
           <Stack spacing={2}>
             {!token ? (
-              <Alert severity="error">The password reset link is invalid or has expired.</Alert>
+              <Alert severity="error">Ссылка для смены пароля повреждена или устарела.</Alert>
             ) : null}
 
             {errors.root?.message ? <Alert severity="error">{errors.root.message}</Alert> : null}
@@ -60,24 +61,24 @@ export function ResetPasswordPage() {
             <input
               type="password"
               {...register("password", {
-                required: "New password is required.",
+                required: "Введите новый пароль.",
                 minLength: {
                   value: 8,
-                  message: "Password must be at least 8 characters."
+                  message: "Пароль должен содержать минимум 8 символов."
                 }
               })}
-              placeholder="New password"
+              placeholder="Новый пароль"
               style={{ padding: 14, borderRadius: 12, border: "1px solid #cbd5e1" }}
             />
 
             <input
               type="password"
               {...register("confirmPassword", {
-                required: "Please confirm your password.",
+                required: "Повторите пароль.",
                 validate: (value, formValues) =>
-                  value === formValues.password || "Passwords do not match."
+                  value === formValues.password || "Пароли не совпадают."
               })}
-              placeholder="Confirm password"
+              placeholder="Повторите пароль"
               style={{ padding: 14, borderRadius: 12, border: "1px solid #cbd5e1" }}
             />
 
@@ -87,7 +88,7 @@ export function ResetPasswordPage() {
             ) : null}
 
             <Button type="submit" variant="contained" disabled={isSubmitting || !token}>
-              Save new password
+              Сохранить новый пароль
             </Button>
           </Stack>
         </form>

@@ -10,8 +10,8 @@ import { useAuth } from "../AuthContext";
 import type { ApiResponse } from "../../../shared/types/api";
 
 const schema = z.object({
-  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters")
+  email: z.string().trim().toLowerCase().email("Введите корректный адрес электронной почты"),
+  password: z.string().min(6, "Пароль должен содержать минимум 6 символов")
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -41,28 +41,28 @@ export function LoginPage() {
 
         if (!error.response) {
           setError("root", {
-            message: "Unable to reach the server. Make sure the site is open over HTTPS and the backend is running."
+            message: "Не удалось связаться с сервером. Проверьте, что сайт открыт по защищённому соединению и сервер приложения запущен."
           });
           return;
         }
 
         if (status === 400 || status === 401 || status === 404) {
-          setError("root", { message: responseMessage || "Invalid email or password." });
+          setError("root", { message: responseMessage || "Неверный адрес электронной почты или пароль." });
           return;
         }
 
         if (status === 502 || status === 503 || status === 504) {
           setError("root", {
-            message: "The frontend cannot reach the backend. Check that Spring Boot is running on port 8080."
+            message: "Сайт не может подключиться к серверу приложения. Проверьте, что сервер запущен и доступен."
           });
           return;
         }
 
-        setError("root", { message: responseMessage || `Login failed. Response code: ${status}.` });
+        setError("root", { message: responseMessage || `Ошибка входа. Код ответа: ${status}.` });
         return;
       }
 
-      setError("root", { message: "Unable to sign in. Check your email and password." });
+      setError("root", { message: "Не удалось войти. Проверьте адрес электронной почты и пароль." });
     }
   });
 
@@ -71,20 +71,25 @@ export function LoginPage() {
       <form onSubmit={onSubmit}>
         <Stack spacing={2}>
           {errors.root ? <Alert severity="error">{errors.root.message}</Alert> : null}
-          <TextField label="Email" {...register("email")} error={!!errors.email} helperText={errors.email?.message} />
           <TextField
-            label="Password"
+            label="Электронная почта"
+            {...register("email")}
+            error={!!errors.email}
+            helperText={errors.email?.message}
+          />
+          <TextField
+            label="Пароль"
             type="password"
             {...register("password")}
             error={!!errors.password}
             helperText={errors.password?.message}
           />
           <Button type="submit" variant="contained" size="large" disabled={isSubmitting}>
-            Sign in
+            Войти
           </Button>
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Button component={Link} to="/register">Register</Button>
-            <Button component={Link} to="/forgot-password">Forgot password?</Button>
+            <Button component={Link} to="/register">Регистрация</Button>
+            <Button component={Link} to="/forgot-password">Забыли пароль?</Button>
           </Box>
         </Stack>
       </form>

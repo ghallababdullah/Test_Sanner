@@ -7,7 +7,9 @@ export function VerifyEmailResultPage() {
   const [searchParams] = useSearchParams();
   const status = useMemo(() => searchParams.get("status") ?? "error", [searchParams]);
   const message = useMemo(
-    () => searchParams.get("message") ?? (status === "success" ? "Почта успешно подтверждена." : "Не удалось подтвердить почту."),
+    () =>
+      searchParams.get("message") ??
+      (status === "success" ? "Почта успешно подтверждена." : "Не удалось подтвердить почту."),
     [searchParams, status]
   );
 
