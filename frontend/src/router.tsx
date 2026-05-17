@@ -24,16 +24,18 @@ import { RoiEditorPage } from "./modules/review/pages/RoiEditorPage";
 import { ScanHubPage } from "./modules/scan/pages/ScanHubPage";
 import { ScanSessionsPage } from "./modules/scan/pages/ScanSessionsPage";
 import { ProfilePage } from "./modules/profile/pages/ProfilePage";
+import { RouteErrorPage } from "./shared/routing/RouteErrorPage";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <HomePage /> },
-  { path: "/guide", element: <GuidePage /> },
-  { path: "/login", element: <LoginPage /> },
-  { path: "/register", element: <RegisterPage /> },
-  { path: "/forgot-password", element: <ForgotPasswordPage /> },
-  { path: "/reset-password", element: <ResetPasswordPage /> },
-  { path: "/verify-email-result", element: <VerifyEmailResultPage /> },
+  { path: "/", element: <HomePage />, errorElement: <RouteErrorPage /> },
+  { path: "/guide", element: <GuidePage />, errorElement: <RouteErrorPage /> },
+  { path: "/login", element: <LoginPage />, errorElement: <RouteErrorPage /> },
+  { path: "/register", element: <RegisterPage />, errorElement: <RouteErrorPage /> },
+  { path: "/forgot-password", element: <ForgotPasswordPage />, errorElement: <RouteErrorPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage />, errorElement: <RouteErrorPage /> },
+  { path: "/verify-email-result", element: <VerifyEmailResultPage />, errorElement: <RouteErrorPage /> },
   {
+    errorElement: <RouteErrorPage />,
     element: (
       <ProtectedRoute>
         <AppLayout />

@@ -229,7 +229,9 @@ export function BlankDetailsPage() {
   }, [annotatedUrl, previewTab]);
 
   const sortedAnswerGrades = useMemo(() => {
-    const existingGrades = [...(data?.answerGrades ?? [])].sort((left, right) => left.questionNumber - right.questionNumber);
+    const existingGrades = (data?.answerGrades ?? [])
+      .filter((grade): grade is NonNullable<typeof grade> => Boolean(grade))
+      .sort((left, right) => left.questionNumber - right.questionNumber);
     if (existingGrades.length > 0) {
       return existingGrades;
     }
@@ -238,7 +240,8 @@ export function BlankDetailsPage() {
     const finalAnswerMap = data?.finalAnswers ?? {};
     const scannedBlankId = data?.id ?? "";
 
-    return [...(answerKeysQuery.data ?? [])]
+    return (answerKeysQuery.data ?? [])
+      .filter((answerKey): answerKey is NonNullable<typeof answerKey> => Boolean(answerKey))
       .sort((left, right) => left.questionNumber - right.questionNumber)
       .map((answerKey) => {
         const questionKey = String(answerKey.questionNumber);
@@ -416,7 +419,7 @@ export function BlankDetailsPage() {
                   ? "Распознавание ещё выполняется. Сравнение ответов и ручные исправления станут доступны сразу после завершения."
                   : "Сравнение ответов появится после завершения распознавания."}
             </Alert>
-          ) : data.answerGrades.length === 0 ? (
+          ) : sortedAnswerGrades.length === 0 ? (
             <Alert severity="info">
               Распознавание уже завершено, но детальное оценивание по вопросам ещё не пришло. Поэтому сейчас показываем ответы,
               собранные напрямую из результатов распознавания и ключей теста.
