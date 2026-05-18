@@ -16,7 +16,7 @@ import {
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { applyBlankCorrections, fetchBlankAsset, fetchBlankDetails, retryBlankOcr } from "../api";
 import { SectionCard } from "../../../shared/components/SectionCard";
 import { fetchAnswerKeys } from "../../tests/api";
@@ -128,6 +128,7 @@ function normalizeCorrectionValue(value?: string) {
 export function BlankDetailsPage() {
   const { blankId = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [previewTab, setPreviewTab] = useState<"annotated" | "processed" | "original">("annotated");
   const [draftCorrections, setDraftCorrections] = useState<Record<string, string>>({});
@@ -148,21 +149,24 @@ export function BlankDetailsPage() {
     enabled: !!detailsQuery.data?.testId
   });
 
+  const refreshToken = new URLSearchParams(location.search).get("refresh") ?? "";
+  const assetVersion = `${detailsQuery.data?.processedImagePath ?? ""}|${detailsQuery.data?.processedAt ?? ""}|${refreshToken}`;
+
   const originalAssetQuery = useQuery({
-    queryKey: ["blank-asset", blankId, "original"],
-    queryFn: () => fetchBlankAsset(blankId, "original"),
+    queryKey: ["blank-asset", blankId, "original", assetVersion],
+    queryFn: () => fetchBlankAsset(blankId, "original", assetVersion),
     enabled: !!blankId
   });
 
   const processedAssetQuery = useQuery({
-    queryKey: ["blank-asset", blankId, "processed"],
-    queryFn: () => fetchBlankAsset(blankId, "processed"),
+    queryKey: ["blank-asset", blankId, "processed", assetVersion],
+    queryFn: () => fetchBlankAsset(blankId, "processed", assetVersion),
     enabled: !!blankId
   });
 
   const annotatedAssetQuery = useQuery({
-    queryKey: ["blank-asset", blankId, "annotated"],
-    queryFn: () => fetchBlankAsset(blankId, "annotated"),
+    queryKey: ["blank-asset", blankId, "annotated", assetVersion],
+    queryFn: () => fetchBlankAsset(blankId, "annotated", assetVersion),
     enabled: !!blankId,
     retry: false
   });

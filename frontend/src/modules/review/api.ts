@@ -17,8 +17,13 @@ export async function deleteBlank(blankId: string) {
   return data.data;
 }
 
-export async function fetchBlankAsset(blankId: string, kind: "original" | "processed" | "annotated" | "thumbnail") {
+export async function fetchBlankAsset(
+  blankId: string,
+  kind: "original" | "processed" | "annotated" | "thumbnail",
+  version?: string
+) {
   const { data } = await http.get<Blob>(`/scan/blank/${blankId}/asset/${kind}`, {
+    params: version ? { v: version } : undefined,
     responseType: "blob"
   });
   return data;

@@ -73,6 +73,8 @@ export function RoiReviewPage() {
     enabled: !!blankId
   });
 
+  const previewVersion = detailsQuery.data?.processedImagePath ?? detailsQuery.data?.createdAt ?? blankId;
+
   const testDetailsQuery = useQuery({
     queryKey: ["test-details", detailsQuery.data?.testId],
     queryFn: () => fetchTestDetails(detailsQuery.data!.testId),
@@ -92,15 +94,15 @@ export function RoiReviewPage() {
   });
 
   const annotatedAssetQuery = useQuery({
-    queryKey: ["blank-asset", blankId, "annotated"],
-    queryFn: () => fetchBlankAsset(blankId, "annotated"),
+    queryKey: ["blank-asset", blankId, "annotated", previewVersion],
+    queryFn: () => fetchBlankAsset(blankId, "annotated", previewVersion),
     enabled: !!blankId,
     retry: false
   });
 
   const processedAssetQuery = useQuery({
-    queryKey: ["blank-asset", blankId, "processed"],
-    queryFn: () => fetchBlankAsset(blankId, "processed"),
+    queryKey: ["blank-asset", blankId, "processed", previewVersion],
+    queryFn: () => fetchBlankAsset(blankId, "processed", previewVersion),
     enabled: !!blankId
   });
 
@@ -239,11 +241,11 @@ export function RoiReviewPage() {
                 Если какой-то прямоугольник смещён, лучше исправить его сейчас. Если всё выглядит нормально, подтвердите
                 разметку и вернитесь к карточке бланка.
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<CheckCircleRoundedIcon />}
-                onClick={() => navigate(`/scan/blanks/${blankId}`)}
-              >
+                <Button
+                  variant="contained"
+                  startIcon={<CheckCircleRoundedIcon />}
+                  onClick={() => navigate(`/scan/blanks/${blankId}?refresh=${Date.now()}`)}
+                >
                 Поля выделены верно
               </Button>
               <Button

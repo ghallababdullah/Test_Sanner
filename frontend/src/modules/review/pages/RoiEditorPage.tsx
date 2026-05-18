@@ -168,7 +168,7 @@ export function RoiEditorPage() {
     },
     onSuccess: () => {
       setEditorMessage("Координаты сохранены, проверка запущена заново. Можно вернуться к бланку и следить за новым статусом.");
-      navigate(`/scan/blanks/${blankId}`);
+      navigate(`/scan/blanks/${blankId}?refresh=${Date.now()}`);
     },
     onError: () => setEditorMessage("Не удалось сохранить координаты и заново запустить проверку.")
   });
