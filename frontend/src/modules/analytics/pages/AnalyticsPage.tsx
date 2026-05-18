@@ -8,20 +8,23 @@ import { SectionCard } from "../../../shared/components/SectionCard";
 
 const chartColors = ["#1f4e5f", "#c86b3c", "#2e7d32", "#c58b00", "#c0392b"];
 
-function formatTooltipLabel(value: string | number) {
-  return `Категория: ${value}`;
+function formatTooltipLabel(value: unknown) {
+  return `Категория: ${value ?? "—"}`;
 }
 
-function formatTooltipValue(value: string | number, name: string) {
-  switch (name) {
+function formatTooltipValue(value: unknown, name: unknown) {
+  const safeName = typeof name === "string" ? name : String(name ?? "");
+  const safeValue = typeof value === "number" || typeof value === "string" ? value : "—";
+
+  switch (safeName) {
     case "count":
-      return [`${value}`, "Количество"];
+      return [`${safeValue}`, "Количество"];
     case "accuracyPercentage":
-      return [`${value}%`, "Точность"];
+      return [`${safeValue}%`, "Точность"];
     case "grade":
-      return [`${value}`, "Оценка"];
+      return [`${safeValue}`, "Оценка"];
     default:
-      return [`${value}`, name];
+      return [`${safeValue}`, safeName || "Значение"];
   }
 }
 
@@ -93,7 +96,7 @@ export function AnalyticsPage() {
                         <Cell key={item.grade} fill={chartColors[index % chartColors.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={formatTooltipValue} labelFormatter={formatTooltipLabel} />
+                    <Tooltip formatter={formatTooltipValue} labelFormatter={(label) => formatTooltipLabel(label)} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -113,7 +116,7 @@ export function AnalyticsPage() {
                   <BarChart data={breakdown.questions}>
                     <XAxis dataKey="questionNumber" />
                     <YAxis />
-                    <Tooltip formatter={formatTooltipValue} labelFormatter={(value) => `Вопрос: ${value}`} />
+                    <Tooltip formatter={formatTooltipValue} labelFormatter={(label) => `Вопрос: ${label ?? "—"}`} />
                     <Bar dataKey="accuracyPercentage" fill="#1f4e5f" />
                   </BarChart>
                 </ResponsiveContainer>

@@ -19,26 +19,29 @@ import { SectionCard } from "../../../shared/components/SectionCard";
 
 const chartColors = ["#1f4e5f", "#c86b3c", "#2e7d32", "#c58b00", "#c0392b"];
 
-function formatOverviewTooltipLabel(value: string | number) {
-  return `Категория: ${value}`;
+function formatOverviewTooltipLabel(value: unknown) {
+  return `Категория: ${value ?? "—"}`;
 }
 
-function formatOverviewTooltipValue(value: string | number, name: string) {
-  switch (name) {
+function formatOverviewTooltipValue(value: unknown, name: unknown) {
+  const safeName = typeof name === "string" ? name : String(name ?? "");
+  const safeValue = typeof value === "number" || typeof value === "string" ? value : "—";
+
+  switch (safeName) {
     case "count":
-      return [`${value}`, "Количество"];
+      return [`${safeValue}`, "Количество"];
     case "averagePercentage":
-      return [`${value}%`, "Средний процент"];
+      return [`${safeValue}%`, "Средний процент"];
     case "needsReviewCount":
-      return [`${value}`, "Требуют ручной проверки"];
+      return [`${safeValue}`, "Требуют ручной проверки"];
     case "totalScannedBlanks":
-      return [`${value}`, "Загружено бланков"];
+      return [`${safeValue}`, "Загружено бланков"];
     case "scoredBlanks":
-      return [`${value}`, "Оценено работ"];
+      return [`${safeValue}`, "Оценено работ"];
     case "grade":
-      return [`${value}`, "Оценка"];
+      return [`${safeValue}`, "Оценка"];
     default:
-      return [`${value}`, name];
+      return [`${safeValue}`, safeName || "Значение"];
   }
 }
 
@@ -85,7 +88,7 @@ export function AnalyticsOverviewPage() {
                         <Cell key={item.grade} fill={chartColors[index % chartColors.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={formatOverviewTooltipLabel} />
+                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(label) => formatOverviewTooltipLabel(label)} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -106,7 +109,7 @@ export function AnalyticsOverviewPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="title" hide />
                     <YAxis />
-                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(value) => `Тест: ${value}`} />
+                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(label) => `Тест: ${label ?? "—"}`} />
                     <Bar dataKey="averagePercentage" fill="#1f4e5f" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -128,7 +131,7 @@ export function AnalyticsOverviewPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="title" hide />
                     <YAxis />
-                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(value) => `Тест: ${value}`} />
+                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(label) => `Тест: ${label ?? "—"}`} />
                     <Bar dataKey="needsReviewCount" fill="#c86b3c" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -152,7 +155,7 @@ export function AnalyticsOverviewPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="title" hide />
                     <YAxis />
-                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(value) => `Тест: ${value}`} />
+                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(label) => `Тест: ${label ?? "—"}`} />
                     <Bar dataKey="totalScannedBlanks" fill="#2e7d32" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -174,7 +177,7 @@ export function AnalyticsOverviewPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="title" hide />
                     <YAxis />
-                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(value) => `Тест: ${value}`} />
+                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(label) => `Тест: ${label ?? "—"}`} />
                     <Bar dataKey="scoredBlanks" fill="#c58b00" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
