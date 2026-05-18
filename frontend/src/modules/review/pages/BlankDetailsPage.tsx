@@ -23,6 +23,12 @@ import { fetchAnswerKeys } from "../../tests/api";
 import { explainScanError } from "../scanErrorMessages";
 import { formatMatchType, formatProcessingStatus } from "../statusLabels";
 
+const METADATA_CORRECTION_KEYS = {
+  studentName: "studentName",
+  studentClass: "studentClass",
+  testDate: "testDate"
+} as const;
+
 function formatDateTime(value?: string) {
   if (!value) {
     return "—";
@@ -61,20 +67,6 @@ function matchTypeColor(matchType?: string): "success" | "warning" | "error" | "
       return "error";
     default:
       return "default";
-  }
-}
-
-function formatEngineName(engine?: string) {
-  switch (engine) {
-    case "tesseract":
-      return "Tesseract";
-    case "trocr":
-      return "TrOCR";
-    case "combined":
-    case "ensemble":
-      return "Совмещённая оценка";
-    default:
-      return engine ?? "";
   }
 }
 
@@ -127,6 +119,10 @@ function buildStatusTone(status?: string): "success" | "warning" | "error" {
   }
 
   return "warning";
+}
+
+function normalizeCorrectionValue(value?: string) {
+  return value?.trim() ?? "";
 }
 
 export function BlankDetailsPage() {
@@ -202,14 +198,15 @@ export function BlankDetailsPage() {
   });
 
   const data = detailsQuery.data;
-  const scanError = explainScanError(data?.processingError);
+
   const originalUrl = useAssetUrl(originalAssetQuery.data);
   const processedUrl = useAssetUrl(processedAssetQuery.data);
   const annotatedUrl = useAssetUrl(annotatedAssetQuery.data);
+  const scanError = explainScanError(data?.processingError);
 
   const previewUrl = useMemo(() => {
     if (previewTab === "annotated") {
-      return annotatedUrl ?? processedUrl ?? originalUrl;
+      return processedUrl ?? annotatedUrl ?? originalUrl;
     }
     if (previewTab === "processed") {
       return processedUrl ?? originalUrl;
@@ -220,64 +217,86 @@ export function BlankDetailsPage() {
   const previewHint = useMemo(() => {
     if (previewTab === "annotated") {
       return annotatedUrl
-        ? "Схема разметки полей. Здесь видно, как система разделила бланк на зоны для распознавания."
-        : "Схема разметки пока недоступна, поэтому временно показываем выровненный бланк.";
+        ? "Здесь показывается актуальная разметка полей поверх обработанного бланка."
+        : "Файл с отдельной схемой разметки не найден, поэтому показываем обновлённый обработанный бланк.";
     }
 
     if (previewTab === "processed") {
-      return "Выровненное изображение после определения листа и исправления перспективы.";
+      return "Это выровненное изображение после определения листа и исправления перспективы.";
     }
 
-    return "Исходное изображение, которое было загружено или снято камерой.";
+    return "Это исходное изображение, которое было загружено или снято камерой.";
   }, [annotatedUrl, previewTab]);
 
   const sortedAnswerGrades = useMemo(() => {
     const existingGrades = (data?.answerGrades ?? [])
       .filter((grade): grade is NonNullable<typeof grade> => Boolean(grade))
       .sort((left, right) => left.questionNumber - right.questionNumber);
+
     if (existingGrades.length > 0) {
       return existingGrades;
     }
+
+    const answerKeys = (answerKeysQuery.data ?? [])
+      .filter((answerKey): answerKey is NonNullable<typeof answerKey> => Boolean(answerKey))
+      .sort((left, right) => left.questionNumber - right.questionNumber);
 
     const answerMap = data?.answers ?? {};
     const finalAnswerMap = data?.finalAnswers ?? {};
     const scannedBlankId = data?.id ?? "";
 
-    return (answerKeysQuery.data ?? [])
-      .filter((answerKey): answerKey is NonNullable<typeof answerKey> => Boolean(answerKey))
-      .sort((left, right) => left.questionNumber - right.questionNumber)
-      .map((answerKey) => {
-        const questionKey = String(answerKey.questionNumber);
-        const rawAnswer = answerMap[questionKey] ?? "";
-        const finalAnswer = finalAnswerMap[questionKey] ?? rawAnswer;
+    return answerKeys.map((answerKey) => {
+      const questionKey = String(answerKey.questionNumber);
+      const rawAnswer = answerMap[questionKey] ?? "";
+      const finalAnswer = finalAnswerMap[questionKey] ?? rawAnswer;
 
-        return {
-          id: `fallback-${questionKey}`,
-          scannedBlankId,
-          questionNumber: answerKey.questionNumber,
-          correctAnswer: answerKey.correctAnswer,
-          studentAnswer: rawAnswer,
-          finalAnswer,
-          score: 0,
-          maxPoints: answerKey.maxPoints,
-          matchType: "PENDING_SCORING"
-        };
-      });
+      return {
+        id: `fallback-${questionKey}`,
+        scannedBlankId,
+        questionNumber: answerKey.questionNumber,
+        correctAnswer: answerKey.correctAnswer,
+        studentAnswer: rawAnswer,
+        finalAnswer,
+        score: 0,
+        maxPoints: answerKey.maxPoints,
+        matchType: "PENDING_SCORING"
+      };
+    });
   }, [answerKeysQuery.data, data?.answerGrades, data?.answers, data?.finalAnswers, data?.id]);
 
   const changedCorrectionsCount = useMemo(
     () =>
       Object.entries(draftCorrections).filter(([key, value]) => {
-        const normalized = value.trim();
-        return normalized.length > 0 && normalized !== (data?.errorCorrections?.[key] ?? "");
+        const normalized = normalizeCorrectionValue(value);
+        return normalized.length > 0 && normalized !== normalizeCorrectionValue(data?.errorCorrections?.[key] ?? "");
       }).length,
     [data?.errorCorrections, draftCorrections]
   );
 
   const canApplyCorrections = useMemo(
-    () => Object.values(draftCorrections).some((value) => value.trim().length > 0),
-    [draftCorrections]
+    () =>
+      Object.entries(draftCorrections).some(([key, value]) => {
+        const normalized = normalizeCorrectionValue(value);
+        return normalized.length > 0 && normalized !== normalizeCorrectionValue(data?.errorCorrections?.[key] ?? "");
+      }),
+    [data?.errorCorrections, draftCorrections]
   );
+
+  const currentStudentNameCorrection =
+    draftCorrections[METADATA_CORRECTION_KEYS.studentName] ??
+    data?.errorCorrections?.[METADATA_CORRECTION_KEYS.studentName] ??
+    data?.studentName ??
+    "";
+  const currentStudentClassCorrection =
+    draftCorrections[METADATA_CORRECTION_KEYS.studentClass] ??
+    data?.errorCorrections?.[METADATA_CORRECTION_KEYS.studentClass] ??
+    data?.studentClass ??
+    "";
+  const currentTestDateCorrection =
+    draftCorrections[METADATA_CORRECTION_KEYS.testDate] ??
+    data?.errorCorrections?.[METADATA_CORRECTION_KEYS.testDate] ??
+    data?.testDate ??
+    "";
 
   const isOcrCompleted = data?.processingStatus === "OCR_COMPLETED";
   const canStartOcr = data?.processingStatus === "PENDING_OCR";
@@ -320,7 +339,10 @@ export function BlankDetailsPage() {
               </Stack>
             </SectionCard>
 
-            <SectionCard title="Статус распознавания" subtitle="Сначала подтвердите разметку, затем запустите проверку и дождитесь завершения OCR.">
+            <SectionCard
+              title="Статус распознавания"
+              subtitle="Сначала подтвердите разметку, затем запустите проверку и дождитесь завершения OCR."
+            >
               <Stack spacing={1.5}>
                 <Chip color={buildStatusTone(data.processingStatus)} label={formatProcessingStatus(data.processingStatus)} />
                 {scanError ? (
@@ -339,6 +361,11 @@ export function BlankDetailsPage() {
                 {startOcrMutation.isError ? (
                   <Alert severity="error">Не удалось запустить распознавание. Попробуйте ещё раз.</Alert>
                 ) : null}
+                <Alert severity={data.needsReview ? "warning" : "success"}>
+                  {data.needsReview
+                    ? "Бланк отмечен для ручной проверки. Обычно это значит, что система не уверена в ответах, не смогла надёжно считать имя или класс, либо нашла несовпадение класса с параметрами теста."
+                    : "Сейчас автоматическая проверка считает этот бланк достаточно надёжным: ответы, имя, класс и общая уверенность OCR не вызвали дополнительных сомнений."}
+                </Alert>
                 <Button
                   variant="outlined"
                   startIcon={<VisibilityRoundedIcon />}
@@ -354,6 +381,19 @@ export function BlankDetailsPage() {
                     disabled={startOcrMutation.isPending}
                   >
                     {startOcrMutation.isPending ? "Запускаем проверку..." : "Начать проверку"}
+                  </Button>
+                ) : null}
+                {!canStartOcr && !isOcrInProgress ? (
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<PlayArrowRoundedIcon />}
+                    onClick={() => startOcrMutation.mutate()}
+                    disabled={startOcrMutation.isPending}
+                  >
+                    {startOcrMutation.isPending
+                      ? "Запускаем повторную проверку..."
+                      : "Я исправил разметку полей и хочу повторить проверку OCR"}
                   </Button>
                 ) : null}
               </Stack>
@@ -381,7 +421,7 @@ export function BlankDetailsPage() {
 
               {previewTab === "annotated" && annotatedAssetQuery.isError ? (
                 <Alert severity="info">
-                  Схема разметки для этого бланка пока не найдена. Поэтому временно показываем выровненное изображение.
+                  Отдельная схема разметки пока недоступна, поэтому временно показываем обновлённый обработанный бланк.
                 </Alert>
               ) : null}
 
@@ -411,21 +451,20 @@ export function BlankDetailsPage() {
 
       <SectionCard
         title="Сравнение с правильными ответами"
-        subtitle="Здесь видно, какой ответ увидела система, какой ответ принят как итоговый и какие правки можно внести вручную."
+        subtitle="Здесь видно, что распознала система, какие ручные исправления уже применены и что ещё можно скорректировать."
       >
         <Stack spacing={2}>
           {!isOcrCompleted ? (
             <Alert severity="info">
               {canStartOcr
-                ? "Разметка уже подтверждена, но распознавание ещё не запускалось. Нажмите «Начать проверку» в блоке статуса распознавания."
+                ? "Разметка уже подтверждена, но распознавание ещё не запускалось. Нажмите «Начать проверку» в блоке статуса."
                 : isOcrInProgress
                   ? "Распознавание ещё выполняется. Сравнение ответов и ручные исправления станут доступны сразу после завершения."
                   : "Сравнение ответов появится после завершения распознавания."}
             </Alert>
           ) : sortedAnswerGrades.length === 0 ? (
             <Alert severity="info">
-              Распознавание уже завершено, но детальное оценивание по вопросам ещё не пришло. Поэтому сейчас показываем ответы,
-              собранные напрямую из результатов распознавания и ключей теста.
+              Распознавание уже завершено, но детальное оценивание по вопросам ещё не пришло. Пока показываем ответы напрямую из OCR и ключей теста.
             </Alert>
           ) : null}
 
@@ -438,28 +477,91 @@ export function BlankDetailsPage() {
           ) : null}
 
           {isOcrCompleted ? (
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} justifyContent="space-between" alignItems={{ sm: "center" }}>
-              <Typography variant="body2" color="text.secondary">
-                Если система ошиблась, введите правильный ответ в нужное поле и нажмите «Применить исправления».
-              </Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                <Button
-                  variant="text"
-                  onClick={() => setDraftCorrections(data.errorCorrections ?? {})}
-                  disabled={applyCorrectionsMutation.isPending}
-                >
-                  Сбросить изменения
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<SaveRoundedIcon />}
-                  disabled={!canApplyCorrections || applyCorrectionsMutation.isPending}
-                  onClick={() => applyCorrectionsMutation.mutate()}
-                >
-                  {applyCorrectionsMutation.isPending ? "Сохраняем..." : "Применить исправления"}
-                </Button>
+            <>
+              <SectionCard
+                title="Ручная правка метаданных"
+                subtitle="Здесь можно исправить имя, класс и дату, если OCR считал их неверно или пропустил."
+              >
+                <Stack spacing={2}>
+                  <Alert severity="info">
+                    Имя студента будет сохранено без пробелов. Если вы исправили эти поля после редактирования разметки, при необходимости можно сразу ниже повторно запустить OCR.
+                  </Alert>
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <TextField
+                        fullWidth
+                        label="Имя студента"
+                        value={currentStudentNameCorrection}
+                        onChange={(event) =>
+                          setDraftCorrections((current) => ({
+                            ...current,
+                            [METADATA_CORRECTION_KEYS.studentName]: event.target.value
+                          }))
+                        }
+                        placeholder="Например, ИВАНОВААЛИНА"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <TextField
+                        fullWidth
+                        label="Класс"
+                        value={currentStudentClassCorrection}
+                        onChange={(event) =>
+                          setDraftCorrections((current) => ({
+                            ...current,
+                            [METADATA_CORRECTION_KEYS.studentClass]: event.target.value
+                          }))
+                        }
+                        placeholder="Например, 11Б"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <TextField
+                        fullWidth
+                        label="Дата теста"
+                        type="date"
+                        value={currentTestDateCorrection}
+                        InputLabelProps={{ shrink: true }}
+                        onChange={(event) =>
+                          setDraftCorrections((current) => ({
+                            ...current,
+                            [METADATA_CORRECTION_KEYS.testDate]: event.target.value
+                          }))
+                        }
+                      />
+                    </Grid>
+                  </Grid>
+                </Stack>
+              </SectionCard>
+
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1.5}
+                justifyContent="space-between"
+                alignItems={{ sm: "center" }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Если система ошиблась, введите правильные значения и нажмите «Применить исправления». Для ответов выше всегда показан исходный распознанный текст, а ручные замены отдельно сохраняются как итоговые.
+                </Typography>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                  <Button
+                    variant="text"
+                    onClick={() => setDraftCorrections(data.errorCorrections ?? {})}
+                    disabled={applyCorrectionsMutation.isPending}
+                  >
+                    Сбросить изменения
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<SaveRoundedIcon />}
+                    disabled={!canApplyCorrections || applyCorrectionsMutation.isPending}
+                    onClick={() => applyCorrectionsMutation.mutate()}
+                  >
+                    {applyCorrectionsMutation.isPending ? "Сохраняем..." : "Применить исправления"}
+                  </Button>
+                </Stack>
               </Stack>
-            </Stack>
+            </>
           ) : null}
 
           <Grid container spacing={2}>
@@ -493,18 +595,18 @@ export function BlankDetailsPage() {
                       </Stack>
 
                       <Typography variant="body2">
-                        {"Правильный ответ: "}<strong>{answerGrade.correctAnswer || "—"}</strong>
+                        Правильный ответ: <strong>{answerGrade.correctAnswer || "—"}</strong>
                       </Typography>
                       <Typography variant="body2">
-                        {"Распознанный ответ: "}<strong>{rawAnswer || "—"}</strong>
+                        Распознанный ответ: <strong>{rawAnswer || "—"}</strong>
                       </Typography>
                       <Typography variant="body2">
-                        {"Баллы: "}<strong>{answerGrade.matchType === "PENDING_SCORING" ? "—" : answerGrade.score}</strong> / {answerGrade.maxPoints}
+                        Баллы: <strong>{answerGrade.matchType === "PENDING_SCORING" ? "—" : answerGrade.score}</strong> / {answerGrade.maxPoints}
                       </Typography>
 
                       {existingCorrection ? (
                         <Alert severity="info" sx={{ py: 0 }}>
-                          Уже применено исправление: {existingCorrection}
+                          Для этого вопроса уже применено ручное исправление. Выше показан исходный распознанный ответ, а итоговое исправление: <strong>{existingCorrection}</strong>
                         </Alert>
                       ) : null}
 

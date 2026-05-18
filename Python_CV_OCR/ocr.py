@@ -456,7 +456,7 @@ def build_ocr_payload(
 
     surname = normalize_text(ocr_fields.get("surname", {}).get("text"))
     name = normalize_text(ocr_fields.get("name", {}).get("text"))
-    student_name = normalize_text(" ".join(part for part in [surname, name] if part))
+    student_name = normalize_text("".join(part for part in [surname, name] if part))
     student_class = normalize_text(ocr_fields.get("class", {}).get("text"))
     detected_test_date = normalize_text(ocr_fields.get("date", {}).get("text"))
 
@@ -856,7 +856,7 @@ def build_ocr_payload(
 
     surname = normalize_text(ocr_fields.get("surname", {}).get("text"))
     name = normalize_text(ocr_fields.get("name", {}).get("text"))
-    student_name = normalize_text(" ".join(part for part in [surname, name] if part))
+    student_name = normalize_text("".join(part for part in [surname, name] if part))
     student_class = normalize_text(ocr_fields.get("class", {}).get("text"))
     detected_test_date = normalize_text(ocr_fields.get("date", {}).get("text"))
 

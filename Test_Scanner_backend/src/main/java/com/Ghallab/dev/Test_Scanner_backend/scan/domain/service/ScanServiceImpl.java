@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.nio.file.Files;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +62,9 @@ import java.util.stream.Collectors;
 public class ScanServiceImpl implements ScanService {
     private static final int SCAN_SESSION_NAME_MAX_LENGTH = 200;
     private static final int SCAN_SESSION_DEVICE_FIELD_MAX_LENGTH = 100;
+    private static final String STUDENT_NAME_CORRECTION_KEY = "studentName";
+    private static final String STUDENT_CLASS_CORRECTION_KEY = "studentClass";
+    private static final String TEST_DATE_CORRECTION_KEY = "testDate";
 
     private final ScanSessionRepository scanSessionRepository;
     private final ScannedBlankRepository scannedBlankRepository;
@@ -420,16 +424,46 @@ public class ScanServiceImpl implements ScanService {
                     ))
                     : new LinkedHashMap<>();
 
+            String correctedStudentName = normalizeStudentNameCorrection(rawCorrections.get(STUDENT_NAME_CORRECTION_KEY));
+            String correctedStudentClass = normalizeTextCorrection(rawCorrections.get(STUDENT_CLASS_CORRECTION_KEY));
+            LocalDate correctedTestDate = parseDateCorrection(rawCorrections.get(TEST_DATE_CORRECTION_KEY));
+
+            Map<String, String> answerCorrections = rawCorrections.entrySet().stream()
+                    .filter(entry -> !STUDENT_NAME_CORRECTION_KEY.equals(entry.getKey()))
+                    .filter(entry -> !STUDENT_CLASS_CORRECTION_KEY.equals(entry.getKey()))
+                    .filter(entry -> !TEST_DATE_CORRECTION_KEY.equals(entry.getKey()))
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            (left, right) -> right,
+                            LinkedHashMap::new
+                    ));
+
             Map<String, String> filteredCorrections = scannedBlankResultService.filterAnswersForTest(
                     blank.getTest().getId(),
-                    rawCorrections
+                    answerCorrections
             );
-            if (filteredCorrections.isEmpty()) {
-                return Response.error("No valid error corrections matched this test's answer keys", 400);
+
+            Map<String, String> storedCorrections = new LinkedHashMap<>(filteredCorrections);
+            if (correctedStudentName != null) {
+                blank.setStudentName(correctedStudentName);
+                storedCorrections.put(STUDENT_NAME_CORRECTION_KEY, correctedStudentName);
+            }
+            if (correctedStudentClass != null) {
+                blank.setStudentClass(correctedStudentClass);
+                storedCorrections.put(STUDENT_CLASS_CORRECTION_KEY, correctedStudentClass);
+            }
+            if (correctedTestDate != null) {
+                blank.setTestDate(correctedTestDate);
+                storedCorrections.put(TEST_DATE_CORRECTION_KEY, correctedTestDate.toString());
+            }
+
+            if (storedCorrections.isEmpty()) {
+                return Response.error("No valid corrections were provided", 400);
             }
 
             // Serialize filtered errorCorrections Object to JSON string
-            String errorCorrectionsJson = objectMapper.writeValueAsString(filteredCorrections);
+            String errorCorrectionsJson = objectMapper.writeValueAsString(storedCorrections);
 
             // Set the corrections on the blank
             blank.setErrorCorrections(errorCorrectionsJson);
@@ -451,6 +485,27 @@ public class ScanServiceImpl implements ScanService {
             log.error("Error applying corrections", e);
             return Response.error("Failed to apply corrections: " + e.getMessage(), 500);
         }
+    }
+
+    private String normalizeStudentNameCorrection(String value) {
+        String normalized = normalizeTextCorrection(value);
+        return normalized == null ? null : normalized.replaceAll("\\s+", "");
+    }
+
+    private String normalizeTextCorrection(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private LocalDate parseDateCorrection(String value) {
+        String normalized = normalizeTextCorrection(value);
+        if (normalized == null) {
+            return null;
+        }
+        return LocalDate.parse(normalized);
     }
 
     @Override

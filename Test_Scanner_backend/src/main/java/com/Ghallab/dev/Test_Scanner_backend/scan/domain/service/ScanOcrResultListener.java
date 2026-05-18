@@ -96,6 +96,9 @@ public class ScanOcrResultListener {
 
         blank.setStudentName(event.getStudentName());
         blank.setStudentClass(event.getStudentClass());
+        if (event.getTestDate() != null) {
+            blank.setTestDate(event.getTestDate());
+        }
         blank.setAnswers(objectMapper.writeValueAsString(defaultMap(filteredAnswers)));
         blank.setErrorCorrections(filteredCorrections == null || filteredCorrections.isEmpty()
                 ? null

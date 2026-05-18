@@ -265,6 +265,7 @@ def build_result_event(job_payload: dict[str, Any], ocr_payload: dict[str, Any] 
         "status": status,
         "studentName": None if ocr_payload is None else ocr_payload.get("studentName"),
         "studentClass": None if ocr_payload is None else ocr_payload.get("studentClass"),
+        "testDate": None if ocr_payload is None else ocr_payload.get("detectedTestDate"),
         "answers": {} if ocr_payload is None else (ocr_payload.get("answers") or {}),
         "errorCorrections": None if ocr_payload is None else ocr_payload.get("errorCorrections"),
         "overallConfidence": None if ocr_payload is None else ocr_payload.get("overallConfidence"),

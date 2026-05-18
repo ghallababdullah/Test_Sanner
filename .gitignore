@@ -5,7 +5,10 @@ Test_Scanner_backend/storage/
 Test_Scanner_backend/.gradle-home/
 Test_Scanner_backend/.gradle-home-analytics/
 Test_Scanner_backend/.env
+.env.local
 frontend/.env
+frontend/.env.development.local
+frontend/.env.production.local
 frontend/.cert/
 .env.production
 .env.production.local

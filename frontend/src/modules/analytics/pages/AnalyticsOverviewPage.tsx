@@ -19,6 +19,29 @@ import { SectionCard } from "../../../shared/components/SectionCard";
 
 const chartColors = ["#1f4e5f", "#c86b3c", "#2e7d32", "#c58b00", "#c0392b"];
 
+function formatOverviewTooltipLabel(value: string | number) {
+  return `Категория: ${value}`;
+}
+
+function formatOverviewTooltipValue(value: string | number, name: string) {
+  switch (name) {
+    case "count":
+      return [`${value}`, "Количество"];
+    case "averagePercentage":
+      return [`${value}%`, "Средний процент"];
+    case "needsReviewCount":
+      return [`${value}`, "Требуют ручной проверки"];
+    case "totalScannedBlanks":
+      return [`${value}`, "Загружено бланков"];
+    case "scoredBlanks":
+      return [`${value}`, "Оценено работ"];
+    case "grade":
+      return [`${value}`, "Оценка"];
+    default:
+      return [`${value}`, name];
+  }
+}
+
 export function AnalyticsOverviewPage() {
   const navigate = useNavigate();
   const overviewQuery = useQuery({ queryKey: ["analytics-overview"], queryFn: fetchOverview });
@@ -62,7 +85,7 @@ export function AnalyticsOverviewPage() {
                         <Cell key={item.grade} fill={chartColors[index % chartColors.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={formatOverviewTooltipLabel} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -83,7 +106,7 @@ export function AnalyticsOverviewPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="title" hide />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(value) => `Тест: ${value}`} />
                     <Bar dataKey="averagePercentage" fill="#1f4e5f" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -105,7 +128,7 @@ export function AnalyticsOverviewPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="title" hide />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(value) => `Тест: ${value}`} />
                     <Bar dataKey="needsReviewCount" fill="#c86b3c" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -129,7 +152,7 @@ export function AnalyticsOverviewPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="title" hide />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(value) => `Тест: ${value}`} />
                     <Bar dataKey="totalScannedBlanks" fill="#2e7d32" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -151,7 +174,7 @@ export function AnalyticsOverviewPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="title" hide />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={formatOverviewTooltipValue} labelFormatter={(value) => `Тест: ${value}`} />
                     <Bar dataKey="scoredBlanks" fill="#c58b00" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>

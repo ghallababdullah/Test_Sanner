@@ -21,7 +21,8 @@ COPY Python_CV_OCR /opt/python_cv_ocr
 COPY Python_CV_OCR/requirements-preview.txt /tmp/requirements-preview.txt
 RUN python3 -m venv /opt/python-preview-venv \
     && /opt/python-preview-venv/bin/pip install --no-cache-dir --upgrade pip \
-    && /opt/python-preview-venv/bin/pip install --no-cache-dir -r /tmp/requirements-preview.txt
+    && /opt/python-preview-venv/bin/pip install --no-cache-dir -r /tmp/requirements-preview.txt \
+    && /opt/python-preview-venv/bin/python -c "import cv2, numpy; print('preview deps ok')"
 
 COPY --from=build /app/build/libs/*.jar /app/app.jar
 

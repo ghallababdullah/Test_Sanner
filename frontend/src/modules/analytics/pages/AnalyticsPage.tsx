@@ -8,6 +8,23 @@ import { SectionCard } from "../../../shared/components/SectionCard";
 
 const chartColors = ["#1f4e5f", "#c86b3c", "#2e7d32", "#c58b00", "#c0392b"];
 
+function formatTooltipLabel(value: string | number) {
+  return `Категория: ${value}`;
+}
+
+function formatTooltipValue(value: string | number, name: string) {
+  switch (name) {
+    case "count":
+      return [`${value}`, "Количество"];
+    case "accuracyPercentage":
+      return [`${value}%`, "Точность"];
+    case "grade":
+      return [`${value}`, "Оценка"];
+    default:
+      return [`${value}`, name];
+  }
+}
+
 export function AnalyticsPage() {
   const { testId = "" } = useParams();
   const navigate = useNavigate();
@@ -76,7 +93,7 @@ export function AnalyticsPage() {
                         <Cell key={item.grade} fill={chartColors[index % chartColors.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={formatTooltipValue} labelFormatter={formatTooltipLabel} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -96,7 +113,7 @@ export function AnalyticsPage() {
                   <BarChart data={breakdown.questions}>
                     <XAxis dataKey="questionNumber" />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={formatTooltipValue} labelFormatter={(value) => `Вопрос: ${value}`} />
                     <Bar dataKey="accuracyPercentage" fill="#1f4e5f" />
                   </BarChart>
                 </ResponsiveContainer>
