@@ -49,8 +49,11 @@ function formatConfidence(value?: number) {
 
 function matchTypeColor(matchType?: string): "success" | "warning" | "error" | "default" {
   switch (matchType) {
+    case "EXACT":
     case "EXACT_MATCH":
       return "success";
+    case "TOLERANCE_1":
+    case "TOLERANCE_2":
     case "ONE_CHAR_DIFF":
     case "TWO_CHAR_DIFF":
       return "warning";
@@ -464,11 +467,9 @@ export function BlankDetailsPage() {
               const questionKey = String(answerGrade.questionNumber);
               const draftValue = draftCorrections[questionKey] ?? "";
               const rawAnswer = data.answers?.[questionKey] ?? answerGrade.studentAnswer ?? "";
-              const finalAnswer = data.finalAnswers?.[questionKey] ?? answerGrade.finalAnswer ?? "";
               const existingCorrection = data.errorCorrections?.[questionKey] ?? "";
               const assessment = data.answerAssessments?.[questionKey];
               const confidenceBadge = getConfidenceBadge(assessment?.combinedConfidence, assessment?.reviewRecommended);
-              const engineName = formatEngineName(assessment?.engine);
 
               return (
                 <Grid key={answerGrade.id || questionKey} size={{ xs: 12, md: 6, xl: 4 }}>
@@ -492,20 +493,13 @@ export function BlankDetailsPage() {
                       </Stack>
 
                       <Typography variant="body2">
-                        Правильный ответ: <strong>{answerGrade.correctAnswer || "—"}</strong>
+                        {"Правильный ответ: "}<strong>{answerGrade.correctAnswer || "—"}</strong>
                       </Typography>
                       <Typography variant="body2">
-                        Ответ системы: <strong>{rawAnswer || "—"}</strong>
+                        {"Распознанный ответ: "}<strong>{rawAnswer || "—"}</strong>
                       </Typography>
                       <Typography variant="body2">
-                        Итоговый ответ: <strong>{finalAnswer || "—"}</strong>
-                      </Typography>
-                      <Typography variant="body2">
-                        Баллы: <strong>{answerGrade.matchType === "PENDING_SCORING" ? "—" : answerGrade.score}</strong> / {answerGrade.maxPoints}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Уверенность: <strong>{formatConfidence(assessment?.combinedConfidence)}</strong>
-                        {engineName ? ` · движок: ${engineName}` : ""}
+                        {"Баллы: "}<strong>{answerGrade.matchType === "PENDING_SCORING" ? "—" : answerGrade.score}</strong> / {answerGrade.maxPoints}
                       </Typography>
 
                       {existingCorrection ? (

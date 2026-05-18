@@ -32,14 +32,17 @@ export function formatReviewStatus(status?: string) {
 
 export function formatMatchType(matchType?: string) {
   switch (matchType) {
+    case "EXACT":
     case "EXACT_MATCH":
-      return "Полное совпадение";
+      return "Точное совпадение";
+    case "TOLERANCE_1":
     case "ONE_CHAR_DIFF":
-      return "Отличие в 1 символ";
+      return "1 символ не совпадает";
+    case "TOLERANCE_2":
     case "TWO_CHAR_DIFF":
-      return "Отличие в 2 символа";
+      return "2 символа не совпадают";
     case "NO_MATCH":
-      return "Нет совпадения";
+      return "3+ символа не совпадают";
     case "PENDING_SCORING":
       return "Оценивание ещё не завершено";
     default:

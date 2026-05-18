@@ -104,9 +104,9 @@ export function RoiReviewPage() {
     enabled: !!blankId
   });
 
-  const annotatedUrl = useAssetUrl(annotatedAssetQuery.data);
   const processedUrl = useAssetUrl(processedAssetQuery.data);
-  const reviewPreviewUrl = annotatedUrl ?? processedUrl;
+  const annotatedUrl = useAssetUrl(annotatedAssetQuery.data);
+  const reviewPreviewUrl = processedUrl ?? annotatedUrl;
 
   const relevantRoiNames = useMemo(
     () => buildRelevantRoiNames(testDetailsQuery.data?.totalQuestions),
@@ -163,7 +163,7 @@ export function RoiReviewPage() {
             title="Предпросмотр разметки"
             subtitle="Подсвечены только те зоны, которые нужны именно этому тесту."
           >
-            {(annotatedAssetQuery.isLoading || processedAssetQuery.isLoading) && !reviewPreviewUrl ? (
+            {(processedAssetQuery.isLoading || annotatedAssetQuery.isLoading) && !reviewPreviewUrl ? (
               <Box sx={{ minHeight: 360, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <CircularProgress />
               </Box>
