@@ -27,7 +27,7 @@ import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 import HourglassBottomRoundedIcon from "@mui/icons-material/HourglassBottomRounded";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { SectionCard } from "../../../shared/components/SectionCard";
 import { fetchTestDetails } from "../../tests/api";
 import { fetchSessionBlanks, startScanSession, submitScannedBlank, submitScannedBlankForPreview } from "../api";
@@ -314,6 +314,8 @@ function CameraGuide({
 export function ScanSessionsPage() {
   const { sessionId = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<CaptureMode>("camera");
   const [processingFlow, setProcessingFlow] = useState<ProcessingFlow>("guided");
   const [queueItems, setQueueItems] = useState<QueuedBlank[]>([]);
@@ -329,6 +331,7 @@ export function ScanSessionsPage() {
   const streamRef = useRef<MediaStream | null>(null);
   const queueRef = useRef<QueuedBlank[]>([]);
   const isDemoMode = sessionId === "demo";
+  const activeSessionIdFromUrl = searchParams.get("activeSession") ?? "";
 
   useEffect(() => {
     queueRef.current = queueItems;
@@ -349,7 +352,31 @@ export function ScanSessionsPage() {
     enabled: !!sessionId && !isDemoMode
   });
 
-  const effectiveSessionId = session?.id ?? "";
+  const effectiveSessionId = session?.id ?? activeSessionIdFromUrl;
+  const hasActiveSession = Boolean(effectiveSessionId);
+
+  const syncActiveSessionId = (activeSessionId: string) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (activeSessionId) {
+        next.set("activeSession", activeSessionId);
+      } else {
+        next.delete("activeSession");
+      }
+      return next;
+    }, { replace: true });
+  };
+
+  const buildSessionReturnTo = (activeSessionId: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (activeSessionId) {
+      next.set("activeSession", activeSessionId);
+    } else {
+      next.delete("activeSession");
+    }
+    const query = next.toString();
+    return `${location.pathname}${query ? `?${query}` : ""}`;
+  };
 
   const sessionBlanksQuery = useQuery({
     queryKey: ["scan-session-blanks", effectiveSessionId],
@@ -372,6 +399,7 @@ export function ScanSessionsPage() {
     },
     onSuccess: (createdSession) => {
       setSession(createdSession);
+      syncActiveSessionId(createdSession.id);
     }
   });
 
@@ -390,13 +418,14 @@ export function ScanSessionsPage() {
         throw new Error("Test and files are required");
       }
 
-      let activeSession = session;
-      if (!activeSession) {
-        activeSession = await startSessionMutation.mutateAsync();
-        setSession(activeSession);
+      let activeSessionId = effectiveSessionId;
+      if (!activeSessionId) {
+        const createdSession = await startSessionMutation.mutateAsync();
+        setSession(createdSession);
+        activeSessionId = createdSession.id;
       }
 
-      if (!activeSession?.id) {
+      if (!activeSessionId) {
         throw new Error("Scan session was not created");
       }
 
@@ -413,7 +442,7 @@ export function ScanSessionsPage() {
 
         try {
           const uploadedBlank = await submitFn({
-            scanSessionId: activeSession.id,
+            scanSessionId: activeSessionId,
             testId: testQuery.data.id,
             image: item.file,
             onUploadProgress: (event) => {
@@ -449,20 +478,25 @@ export function ScanSessionsPage() {
         }
       }
 
-      return uploadedBlanks;
+      return {
+        uploadedBlanks,
+        activeSessionId
+      };
     },
-    onSuccess: async (uploadedBlanks) => {
+    onSuccess: async ({ uploadedBlanks, activeSessionId }) => {
       await sessionBlanksQuery.refetch();
       const snapshot = [...queueRef.current];
       clearQueue(snapshot);
+      const returnTo = buildSessionReturnTo(activeSessionId);
       if (uploadedBlanks.length === 1) {
         navigate(
           processingFlow === "guided"
             ? `/scan/blanks/${uploadedBlanks[0].id}/roi-review`
-            : `/scan/blanks/${uploadedBlanks[0].id}`
+            : `/scan/blanks/${uploadedBlanks[0].id}`,
+          { state: { returnTo } }
         );
       } else if (uploadedBlanks.length > 1 && processingFlow === "guided") {
-        navigate(`/scan/blanks/${uploadedBlanks[0].id}/roi-review`);
+        navigate(`/scan/blanks/${uploadedBlanks[0].id}/roi-review`, { state: { returnTo } });
       }
     }
   });
@@ -561,6 +595,18 @@ export function ScanSessionsPage() {
     }
     return `Сессия активна. Уже загружено бланков: ${sessionBlanksQuery.data?.length ?? 0}.`;
   }, [isDemoMode, session, sessionBlanksQuery.data]);
+
+  const sessionSubtitle = isDemoMode
+    ? helperText
+    : hasActiveSession
+      ? `Сессия активна. Уже загружено бланков: ${sessionBlanksQuery.data?.length ?? 0}.`
+      : "Можно сразу добавить бланки, и система создаст сессию автоматически. Кнопка ниже нужна только если вы хотите открыть сессию заранее.";
+
+  const sessionButtonLabel = hasActiveSession
+    ? "Сессия активна"
+    : startSessionMutation.isPending
+      ? "Создаём сессию..."
+      : "Создать сессию заранее";
 
   const appendFiles = (files: FileList | null, source: CaptureMode) => {
     if (!files || files.length === 0) {
@@ -665,19 +711,19 @@ export function ScanSessionsPage() {
         </Alert>
       ) : null}
 
-      <SectionCard title="Сессия сканирования" subtitle={helperText}>
+      <SectionCard title="Сессия сканирования" subtitle={sessionSubtitle}>
         <Stack spacing={3}>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
             <Button
               startIcon={<PlayArrowRoundedIcon />}
               variant="contained"
               size="large"
-              disabled={isDemoMode || !testQuery.data || startSessionMutation.isPending || Boolean(session)}
+              disabled={isDemoMode || !testQuery.data || startSessionMutation.isPending || hasActiveSession}
               onClick={() => startSessionMutation.mutate()}
             >
-              {session ? "Сессия активна" : startSessionMutation.isPending ? "Создаём сессию..." : "Начать сессию сканирования"}
+              {sessionButtonLabel}
             </Button>
-            {session ? <Chip color="success" label={`ID сессии: ${session.id}`} /> : null}
+            {hasActiveSession ? <Chip color="success" label={`ID сессии: ${effectiveSessionId}`} /> : null}
           </Stack>
 
           {!isDemoMode && testQuery.data ? (
@@ -881,7 +927,8 @@ export function ScanSessionsPage() {
                                 navigate(
                                   processingFlow === "guided"
                                     ? `/scan/blanks/${item.uploadedBlankId}/roi-review`
-                                    : `/scan/blanks/${item.uploadedBlankId}`
+                                    : `/scan/blanks/${item.uploadedBlankId}`,
+                                  { state: { returnTo: buildSessionReturnTo(effectiveSessionId) } }
                                 )
                               }
                             >

@@ -15,7 +15,7 @@ import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { SectionCard } from "../../../shared/components/SectionCard";
 import {
   fetchBlankAsset,
@@ -73,6 +73,8 @@ function toPercent(value: number, max: number) {
 export function RoiEditorPage() {
   const { blankId = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
   const imageContainerRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const [renderSize, setRenderSize] = useState({ width: 1, height: 1 });
@@ -156,7 +158,10 @@ export function RoiEditorPage() {
         roiOverridesQuery.refetch(),
         detailsQuery.refetch()
       ]);
-      navigate(`/scan/blanks/${blankId}/roi-review`);
+      navigate(`/scan/blanks/${blankId}/roi-review`, {
+        replace: true,
+        state: returnTo ? { returnTo } : undefined
+      });
     },
     onError: () => setEditorMessage("Не удалось сохранить координаты и обновить предпросмотр.")
   });
@@ -168,7 +173,10 @@ export function RoiEditorPage() {
     },
     onSuccess: () => {
       setEditorMessage("Координаты сохранены, проверка запущена заново. Можно вернуться к бланку и следить за новым статусом.");
-      navigate(`/scan/blanks/${blankId}?refresh=${Date.now()}`);
+      navigate(`/scan/blanks/${blankId}?refresh=${Date.now()}`, {
+        replace: true,
+        state: returnTo ? { returnTo } : undefined
+      });
     },
     onError: () => setEditorMessage("Не удалось сохранить координаты и заново запустить проверку.")
   });
@@ -437,7 +445,12 @@ export function RoiEditorPage() {
               <Button
                 variant="text"
                 startIcon={<ArrowBackRoundedIcon />}
-                onClick={() => navigate(`/scan/blanks/${blankId}/roi-review`)}
+                onClick={() =>
+                  navigate(`/scan/blanks/${blankId}/roi-review`, {
+                    replace: true,
+                    state: returnTo ? { returnTo } : undefined
+                  })
+                }
               >
                 Назад к проверке полей
               </Button>

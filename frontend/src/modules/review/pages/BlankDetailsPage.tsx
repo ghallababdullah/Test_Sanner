@@ -129,6 +129,7 @@ export function BlankDetailsPage() {
   const { blankId = "" } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
   const queryClient = useQueryClient();
   const [previewTab, setPreviewTab] = useState<"annotated" | "processed" | "original">("annotated");
   const [draftCorrections, setDraftCorrections] = useState<Record<string, string>>({});
@@ -373,7 +374,14 @@ export function BlankDetailsPage() {
                 <Button
                   variant="outlined"
                   startIcon={<VisibilityRoundedIcon />}
-                  onClick={() => navigate(`/scan/blanks/${blankId}/roi-review`)}
+                  onClick={() =>
+                    navigate(`/scan/blanks/${blankId}/roi-review`, {
+                      replace: true,
+                      state: {
+                        returnTo: returnTo ?? `${location.pathname}${location.search}`
+                      }
+                    })
+                  }
                 >
                   Проверить разметку полей
                 </Button>

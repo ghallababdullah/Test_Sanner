@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { SectionCard } from "../../../shared/components/SectionCard";
 import {
   fetchBlankAsset,
@@ -66,6 +66,8 @@ function formatRoiLabel(roiName: string) {
 export function RoiReviewPage() {
   const { blankId = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
 
   const detailsQuery = useQuery({
     queryKey: ["blank-details", blankId],
@@ -244,14 +246,24 @@ export function RoiReviewPage() {
                 <Button
                   variant="contained"
                   startIcon={<CheckCircleRoundedIcon />}
-                  onClick={() => navigate(`/scan/blanks/${blankId}?refresh=${Date.now()}`)}
+                  onClick={() =>
+                    navigate(`/scan/blanks/${blankId}?refresh=${Date.now()}`, {
+                      replace: true,
+                      state: returnTo ? { returnTo } : undefined
+                    })
+                  }
                 >
                 Поля выделены верно
               </Button>
               <Button
                 variant="outlined"
                 startIcon={<EditRoundedIcon />}
-                onClick={() => navigate(`/scan/blanks/${blankId}/roi-editor`)}
+                onClick={() =>
+                  navigate(`/scan/blanks/${blankId}/roi-editor`, {
+                    replace: true,
+                    state: returnTo ? { returnTo } : undefined
+                  })
+                }
               >
                 Исправить области
               </Button>
