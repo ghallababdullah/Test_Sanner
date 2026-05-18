@@ -211,7 +211,7 @@ export function BlankDetailsPage() {
 
   const previewUrl = useMemo(() => {
     if (previewTab === "annotated") {
-      return processedUrl ?? annotatedUrl ?? originalUrl;
+      return annotatedUrl ?? processedUrl ?? originalUrl;
     }
     if (previewTab === "processed") {
       return processedUrl ?? originalUrl;
@@ -306,6 +306,17 @@ export function BlankDetailsPage() {
   const isOcrCompleted = data?.processingStatus === "OCR_COMPLETED";
   const canStartOcr = data?.processingStatus === "PENDING_OCR";
   const isOcrInProgress = data?.processingStatus === "QUEUED" || data?.processingStatus === "PROCESSING";
+  const reviewAlertSeverity: "info" | "warning" | "success" =
+    !isOcrCompleted ? "info" : data.needsReview ? "warning" : "success";
+  const reviewAlertMessage = !isOcrCompleted
+    ? canStartOcr
+      ? "Разметка уже подтверждена, но распознавание ещё не запускалось. Сначала нажмите «Начать проверку», и только после завершения OCR здесь появится итоговая оценка надёжности."
+      : isOcrInProgress
+        ? "Распознавание уже запущено. После завершения OCR здесь появится итоговая оценка надёжности и рекомендация по ручной проверке."
+        : "Сначала нужно подтвердить разметку полей и запустить распознавание. Итоговый статус надёжности появится только после завершения OCR."
+    : data.needsReview
+      ? "Бланк отмечен для ручной проверки. Обычно это значит, что система не уверена в ответах, не смогла надёжно считать имя или класс, либо нашла несовпадение класса с параметрами теста."
+      : "Автоматическая проверка считает этот бланк достаточно надёжным: ответы, имя, класс и общая уверенность OCR не вызвали дополнительных сомнений.";
 
   if (detailsQuery.isLoading && !data) {
     return (
@@ -366,11 +377,14 @@ export function BlankDetailsPage() {
                 {startOcrMutation.isError ? (
                   <Alert severity="error">Не удалось запустить распознавание. Попробуйте ещё раз.</Alert>
                 ) : null}
-                <Alert severity={data.needsReview ? "warning" : "success"}>
+                {!isOcrCompleted ? <Alert severity={reviewAlertSeverity}>{reviewAlertMessage}</Alert> : null}
+                {isOcrCompleted ? (
+                <Alert severity={reviewAlertSeverity}>
                   {data.needsReview
                     ? "Бланк отмечен для ручной проверки. Обычно это значит, что система не уверена в ответах, не смогла надёжно считать имя или класс, либо нашла несовпадение класса с параметрами теста."
                     : "Сейчас автоматическая проверка считает этот бланк достаточно надёжным: ответы, имя, класс и общая уверенность OCR не вызвали дополнительных сомнений."}
                 </Alert>
+                ) : null}
                 <Button
                   variant="outlined"
                   startIcon={<VisibilityRoundedIcon />}
