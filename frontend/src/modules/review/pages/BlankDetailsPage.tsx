@@ -307,11 +307,11 @@ export function BlankDetailsPage() {
   const canStartOcr = data?.processingStatus === "PENDING_OCR";
   const isOcrInProgress = data?.processingStatus === "QUEUED" || data?.processingStatus === "PROCESSING";
   const hasPreviousOcrResult =
-    Object.keys(data.answers ?? {}).length > 0 ||
-    Object.keys(data.finalAnswers ?? {}).length > 0 ||
-    (data.answerGrades?.length ?? 0) > 0 ||
-    Boolean(data.grade) ||
-    (Boolean(data.processedAt) && data.processingStatus !== "PENDING_OCR");
+    Object.keys(data?.answers ?? {}).length > 0 ||
+    Object.keys(data?.finalAnswers ?? {}).length > 0 ||
+    (data?.answerGrades?.length ?? 0) > 0 ||
+    Boolean(data?.grade) ||
+    (Boolean(data?.processedAt) && data?.processingStatus !== "PENDING_OCR");
   const canEditRecognizedData = isOcrCompleted || hasPreviousOcrResult;
   const reviewAlertSeverity: "info" | "warning" | "success" =
     !isOcrCompleted ? "info" : data.needsReview ? "warning" : "success";
