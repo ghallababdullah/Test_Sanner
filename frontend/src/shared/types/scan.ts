@@ -108,6 +108,7 @@ export interface ScannedBlankDetailedResponse {
   processedImagePath: string;
   processingStatus: string;
   processingError?: string;
+  hadPreviousOcrResult: boolean;
   scannedAt?: string;
   processedAt?: string;
   createdAt?: string;

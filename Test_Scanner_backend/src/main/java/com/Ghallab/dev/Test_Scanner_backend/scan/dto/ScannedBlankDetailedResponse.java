@@ -71,6 +71,8 @@ public class ScannedBlankDetailedResponse {
 
     private String processingError;
 
+    private Boolean hadPreviousOcrResult;
+
     private LocalDateTime scannedAt;
 
     private LocalDateTime processedAt;

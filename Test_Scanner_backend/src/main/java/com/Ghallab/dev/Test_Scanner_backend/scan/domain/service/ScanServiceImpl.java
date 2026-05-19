@@ -550,6 +550,12 @@ public class ScanServiceImpl implements ScanService {
             response.setThumbnailPath(blank.getThumbnailPath());
             response.setProcessingStatus(blank.getProcessingStatus() != null ? blank.getProcessingStatus().name() : null);
             response.setProcessingError(blank.getProcessingError());
+            response.setHadPreviousOcrResult(
+                    testResult != null
+                            || (blank.getAnswers() != null && !blank.getAnswers().isBlank())
+                            || !answerGrades.isEmpty()
+                            || blank.getProcessedAt() != null
+            );
             response.setScannedAt(blank.getScannedAt());
             response.setProcessedAt(blank.getProcessedAt());
             response.setScoredAt(testResult != null ? testResult.getCreatedAt() : null);
