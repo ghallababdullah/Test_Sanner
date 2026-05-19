@@ -306,17 +306,40 @@ export function BlankDetailsPage() {
   const isOcrCompleted = data?.processingStatus === "OCR_COMPLETED";
   const canStartOcr = data?.processingStatus === "PENDING_OCR";
   const isOcrInProgress = data?.processingStatus === "QUEUED" || data?.processingStatus === "PROCESSING";
+  const hasPreviousOcrResult =
+    Object.keys(data.answers ?? {}).length > 0 ||
+    Object.keys(data.finalAnswers ?? {}).length > 0 ||
+    (data.answerGrades?.length ?? 0) > 0 ||
+    Boolean(data.grade) ||
+    (Boolean(data.processedAt) && data.processingStatus !== "PENDING_OCR");
+  const canEditRecognizedData = isOcrCompleted || hasPreviousOcrResult;
   const reviewAlertSeverity: "info" | "warning" | "success" =
     !isOcrCompleted ? "info" : data.needsReview ? "warning" : "success";
   const reviewAlertMessage = !isOcrCompleted
     ? canStartOcr
-      ? "Разметка уже подтверждена, но распознавание ещё не запускалось. Сначала нажмите «Начать проверку», и только после завершения OCR здесь появится итоговая оценка надёжности."
+      ? hasPreviousOcrResult
+        ? "Разметка была изменена после предыдущего распознавания. Текущие результаты OCR всё ещё сохранены, но теперь можно повторно запустить OCR, чтобы пересчитать бланк уже с новой разметкой."
+        : "Разметка уже подтверждена, но распознавание ещё не запускалось. Сначала нажмите «Начать проверку», и только после завершения OCR здесь появится итоговая оценка надёжности."
       : isOcrInProgress
         ? "Распознавание уже запущено. После завершения OCR здесь появится итоговая оценка надёжности и рекомендация по ручной проверке."
         : "Сначала нужно подтвердить разметку полей и запустить распознавание. Итоговый статус надёжности появится только после завершения OCR."
     : data.needsReview
       ? "Бланк отмечен для ручной проверки. Обычно это значит, что система не уверена в ответах, не смогла надёжно считать имя или класс, либо нашла несовпадение класса с параметрами теста."
       : "Автоматическая проверка считает этот бланк достаточно надёжным: ответы, имя, класс и общая уверенность OCR не вызвали дополнительных сомнений.";
+  const startOcrButtonLabel = startOcrMutation.isPending
+    ? hasPreviousOcrResult
+      ? "Запускаем повторную проверку..."
+      : "Запускаем проверку..."
+    : hasPreviousOcrResult
+      ? "Повторить проверку OCR"
+      : "Начать проверку";
+  const comparisonPendingMessage = canStartOcr
+    ? hasPreviousOcrResult
+      ? "Бланк уже распознавался раньше. После изменения разметки можно повторно запустить OCR из блока статуса, чтобы обновить результаты под новую разметку."
+      : "Разметка уже подтверждена, но распознавание ещё не запускалось. Нажмите «Начать проверку» в блоке статуса."
+    : isOcrInProgress
+      ? "Распознавание ещё выполняется. Сравнение ответов и ручные исправления станут доступны сразу после завершения."
+      : "Сравнение ответов появится после завершения распознавания.";
 
   if (detailsQuery.isLoading && !data) {
     return (
@@ -405,9 +428,15 @@ export function BlankDetailsPage() {
                     startIcon={<PlayArrowRoundedIcon />}
                     onClick={() => startOcrMutation.mutate()}
                     disabled={startOcrMutation.isPending}
+                    title={startOcrButtonLabel}
                   >
                     {startOcrMutation.isPending ? "Запускаем проверку..." : "Начать проверку"}
                   </Button>
+                ) : null}
+                {canStartOcr && hasPreviousOcrResult ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Предыдущее распознавание уже есть. Здесь можно повторно запустить OCR для бланка с обновлённой разметкой.
+                  </Typography>
                 ) : null}
                 {!canStartOcr && !isOcrInProgress ? (
                   <Button
@@ -480,7 +509,9 @@ export function BlankDetailsPage() {
         subtitle="Здесь видно, что распознала система, какие ручные исправления уже применены и что ещё можно скорректировать."
       >
         <Stack spacing={2}>
-          {!isOcrCompleted ? (
+          {!isOcrCompleted && hasPreviousOcrResult && canStartOcr ? (
+            <Alert severity="info">{comparisonPendingMessage}</Alert>
+          ) : !isOcrCompleted ? (
             <Alert severity="info">
               {canStartOcr
                 ? "Разметка уже подтверждена, но распознавание ещё не запускалось. Нажмите «Начать проверку» в блоке статуса."
@@ -502,7 +533,7 @@ export function BlankDetailsPage() {
             <Alert severity="success">Исправления сохранены. Карточка бланка уже обновлена.</Alert>
           ) : null}
 
-          {isOcrCompleted ? (
+          {canEditRecognizedData ? (
             <>
               <SectionCard
                 title="Ручная правка метаданных"
@@ -636,7 +667,7 @@ export function BlankDetailsPage() {
                         </Alert>
                       ) : null}
 
-                      {isOcrCompleted ? (
+                      {canEditRecognizedData ? (
                         <TextField
                           label={`Исправить ответ для №${questionKey}`}
                           value={draftValue}
