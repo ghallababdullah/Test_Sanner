@@ -74,7 +74,19 @@ export function RoiEditorPage() {
   const { blankId = "" } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
+  const navigationState = (location.state as {
+    returnTo?: string;
+    guidedBlankIds?: string[];
+    guidedIndex?: number;
+  } | null);
+  const returnTo = navigationState?.returnTo;
+  const sharedGuidedState = navigationState
+    ? {
+        returnTo: navigationState.returnTo,
+        guidedBlankIds: navigationState.guidedBlankIds,
+        guidedIndex: navigationState.guidedIndex
+      }
+    : undefined;
   const imageContainerRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const [renderSize, setRenderSize] = useState({ width: 1, height: 1 });
@@ -160,7 +172,7 @@ export function RoiEditorPage() {
       ]);
       navigate(`/scan/blanks/${blankId}/roi-review`, {
         replace: true,
-        state: returnTo ? { returnTo } : undefined
+        state: sharedGuidedState
       });
     },
     onError: () => setEditorMessage("Не удалось сохранить координаты и обновить предпросмотр.")

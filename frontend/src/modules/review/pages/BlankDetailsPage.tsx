@@ -425,7 +425,7 @@ export function BlankDetailsPage() {
                     disabled={startOcrMutation.isPending}
                     title={startOcrButtonLabel}
                   >
-                    {startOcrMutation.isPending ? "Запускаем проверку..." : "Начать проверку"}
+                    {startOcrButtonLabel}
                   </Button>
                 ) : null}
                 {canStartOcr && hasPreviousOcrResult ? (

@@ -12,6 +12,8 @@ import {
 } from "@mui/material";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+import FormatListBulletedRoundedIcon from "@mui/icons-material/FormatListBulletedRounded";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { SectionCard } from "../../../shared/components/SectionCard";
 import {
@@ -67,7 +69,63 @@ export function RoiReviewPage() {
   const { blankId = "" } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
+  const navigationState = (location.state as {
+    returnTo?: string;
+    guidedBlankIds?: string[];
+    guidedIndex?: number;
+  } | null);
+  const returnTo = navigationState?.returnTo;
+  const guidedBlankIds = navigationState?.guidedBlankIds ?? [];
+  const fallbackGuidedIndex = guidedBlankIds.findIndex((id) => id === blankId);
+  const guidedIndex = typeof navigationState?.guidedIndex === "number"
+    ? navigationState.guidedIndex
+    : fallbackGuidedIndex >= 0 ? fallbackGuidedIndex : -1;
+  const hasGuidedBatch = guidedBlankIds.length > 1 && guidedIndex >= 0;
+  const guidedProgressLabel = hasGuidedBatch ? `Бланк ${guidedIndex + 1} из ${guidedBlankIds.length}` : null;
+  const nextBlankId = hasGuidedBatch && guidedIndex < guidedBlankIds.length - 1
+    ? guidedBlankIds[guidedIndex + 1]
+    : null;
+
+  const goToList = () => {
+    if (returnTo) {
+      navigate(returnTo, { replace: true });
+      return;
+    }
+    navigate("/scan", { replace: true });
+  };
+
+  const sharedGuidedState = hasGuidedBatch
+    ? {
+        returnTo,
+        guidedBlankIds,
+        guidedIndex
+      }
+    : returnTo
+      ? { returnTo }
+      : undefined;
+
+  const confirmCurrentRoi = () => {
+    if (nextBlankId) {
+      navigate(`/scan/blanks/${nextBlankId}/roi-review`, {
+        replace: true,
+        state: {
+          returnTo,
+          guidedBlankIds,
+          guidedIndex: guidedIndex + 1
+        }
+      });
+      return;
+    }
+
+    if (returnTo) {
+      navigate(returnTo, { replace: true });
+      return;
+    }
+
+    navigate(`/scan/blanks/${blankId}?refresh=${Date.now()}`, {
+      replace: true
+    });
+  };
 
   const detailsQuery = useQuery({
     queryKey: ["blank-details", blankId],
@@ -161,6 +219,12 @@ export function RoiReviewPage() {
         где уже можно будет запустить проверку.
       </Alert>
 
+      {guidedProgressLabel ? (
+        <Alert severity="info" icon={<FormatListBulletedRoundedIcon fontSize="inherit" />}>
+          {guidedProgressLabel}. Сначала пройдите все бланки по разметке, а OCR запустите потом отдельно.
+        </Alert>
+      ) : null}
+
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, lg: 8 }}>
           <SectionCard
@@ -246,12 +310,7 @@ export function RoiReviewPage() {
                 <Button
                   variant="contained"
                   startIcon={<CheckCircleRoundedIcon />}
-                  onClick={() =>
-                    navigate(`/scan/blanks/${blankId}?refresh=${Date.now()}`, {
-                      replace: true,
-                      state: returnTo ? { returnTo } : undefined
-                    })
-                  }
+                  onClick={confirmCurrentRoi}
                 >
                 Поля выделены верно
               </Button>
@@ -261,11 +320,36 @@ export function RoiReviewPage() {
                 onClick={() =>
                   navigate(`/scan/blanks/${blankId}/roi-editor`, {
                     replace: true,
-                    state: returnTo ? { returnTo } : undefined
+                    state: sharedGuidedState
                   })
                 }
               >
                 Исправить области
+              </Button>
+              {nextBlankId ? (
+                <Button
+                  variant="text"
+                  startIcon={<ArrowForwardRoundedIcon />}
+                  onClick={() =>
+                    navigate(`/scan/blanks/${nextBlankId}/roi-review`, {
+                      replace: true,
+                      state: {
+                        returnTo,
+                        guidedBlankIds,
+                        guidedIndex: guidedIndex + 1
+                      }
+                    })
+                  }
+                >
+                  Следующий бланк
+                </Button>
+              ) : null}
+              <Button
+                variant="text"
+                startIcon={<FormatListBulletedRoundedIcon />}
+                onClick={goToList}
+              >
+                Вернуться к списку
               </Button>
             </Stack>
           </SectionCard>

@@ -488,15 +488,22 @@ export function ScanSessionsPage() {
       const snapshot = [...queueRef.current];
       clearQueue(snapshot);
       const returnTo = buildSessionReturnTo(activeSessionId);
+      const guidedBlankIds = uploadedBlanks.map((blank) => blank.id);
       if (uploadedBlanks.length === 1) {
         navigate(
           processingFlow === "guided"
             ? `/scan/blanks/${uploadedBlanks[0].id}/roi-review`
             : `/scan/blanks/${uploadedBlanks[0].id}`,
-          { state: { returnTo } }
+          {
+            state: processingFlow === "guided"
+              ? { returnTo, guidedBlankIds, guidedIndex: 0 }
+              : { returnTo }
+          }
         );
       } else if (uploadedBlanks.length > 1 && processingFlow === "guided") {
-        navigate(`/scan/blanks/${uploadedBlanks[0].id}/roi-review`, { state: { returnTo } });
+        navigate(`/scan/blanks/${uploadedBlanks[0].id}/roi-review`, {
+          state: { returnTo, guidedBlankIds, guidedIndex: 0 }
+        });
       }
     }
   });
