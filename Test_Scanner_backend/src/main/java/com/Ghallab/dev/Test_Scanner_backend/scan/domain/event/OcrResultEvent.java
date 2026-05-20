@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.util.Map;
 import java.util.List;
 import java.util.UUID;
@@ -20,7 +19,7 @@ public class OcrResultEvent extends DomainEvent {
     private String status;
     private String studentName;
     private String studentClass;
-    private LocalDate testDate;
+    private String testDate;
     private Map<String, String> answers;
     private Map<String, String> errorCorrections;
     private Double overallConfidence;

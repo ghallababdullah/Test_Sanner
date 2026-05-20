@@ -16,8 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -96,8 +100,9 @@ public class ScanOcrResultListener {
 
         blank.setStudentName(event.getStudentName());
         blank.setStudentClass(event.getStudentClass());
-        if (event.getTestDate() != null) {
-            blank.setTestDate(event.getTestDate());
+        LocalDate recognizedTestDate = parseOcrTestDate(event.getTestDate());
+        if (recognizedTestDate != null) {
+            blank.setTestDate(recognizedTestDate);
         }
         blank.setAnswers(objectMapper.writeValueAsString(defaultMap(filteredAnswers)));
         blank.setErrorCorrections(filteredCorrections == null || filteredCorrections.isEmpty()
@@ -149,6 +154,50 @@ public class ScanOcrResultListener {
 
     private Object defaultMap(Object value) {
         return value == null ? Collections.emptyMap() : value;
+    }
+
+    private LocalDate parseOcrTestDate(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return null;
+        }
+
+        String normalized = rawValue.trim();
+        List<DateTimeFormatter> directFormats = List.of(
+                DateTimeFormatter.ISO_LOCAL_DATE,
+                DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+                DateTimeFormatter.ofPattern("dd.MM.yyyy"),
+                DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        );
+
+        for (DateTimeFormatter formatter : directFormats) {
+            try {
+                return LocalDate.parse(normalized, formatter);
+            } catch (DateTimeParseException ignored) {
+                // Try the next known OCR date format.
+            }
+        }
+
+        List<String> separators = List.of("-", ".", "/");
+        for (String separator : separators) {
+            String[] parts = normalized.split(java.util.regex.Pattern.quote(separator));
+            if (parts.length != 3) {
+                continue;
+            }
+            try {
+                int day = Integer.parseInt(parts[0]);
+                int month = Integer.parseInt(parts[1]);
+                int year = Integer.parseInt(parts[2]);
+                if (year < 100) {
+                    year += 2000;
+                }
+                return LocalDate.of(year, month, day);
+            } catch (Exception ignored) {
+                // Try the next separator / format candidate.
+            }
+        }
+
+        log.warn("Unable to parse OCR test date '{}'; keeping existing testDate", rawValue);
+        return null;
     }
 
     private String storeOcrArtifacts(ScannedBlank blank, String processedImagePath) {
