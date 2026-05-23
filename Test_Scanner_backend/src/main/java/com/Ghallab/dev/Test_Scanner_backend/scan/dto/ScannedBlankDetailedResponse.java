@@ -77,6 +77,10 @@ public class ScannedBlankDetailedResponse {
 
     private LocalDateTime processedAt;
 
+    private LocalDateTime ocrStartedAt;
+
+    private LocalDateTime ocrCompletedAt;
+
     private LocalDateTime scoredAt;
 
     private LocalDateTime reviewedAt;

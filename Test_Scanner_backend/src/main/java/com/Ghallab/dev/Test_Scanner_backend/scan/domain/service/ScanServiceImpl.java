@@ -161,6 +161,8 @@ public class ScanServiceImpl implements ScanService {
                 scanJobPublisher.publishScanRequested(savedBlank);
                 savedBlank.setProcessingStatus(ScannedBlank.ProcessingStatus.QUEUED);
                 savedBlank.setProcessingError(null);
+                savedBlank.setOcrStartedAt(LocalDateTime.now());
+                savedBlank.setOcrCompletedAt(null);
                 savedBlank = scannedBlankRepository.save(savedBlank);
             } catch (Exception publishException) {
                 log.error("Failed to publish OCR job for blank: {}", savedBlank.getId(), publishException);
@@ -558,6 +560,8 @@ public class ScanServiceImpl implements ScanService {
             );
             response.setScannedAt(blank.getScannedAt());
             response.setProcessedAt(blank.getProcessedAt());
+            response.setOcrStartedAt(blank.getOcrStartedAt());
+            response.setOcrCompletedAt(blank.getOcrCompletedAt());
             response.setScoredAt(testResult != null ? testResult.getCreatedAt() : null);
             response.setReviewedAt(blank.getReviewedAt());
             response.setCreatedAt(blank.getCreatedAt());
@@ -584,6 +588,8 @@ public class ScanServiceImpl implements ScanService {
             blank.setProcessingStatus(ScannedBlank.ProcessingStatus.QUEUED);
             blank.setProcessingError(null);
             blank.setProcessedAt(null);
+            blank.setOcrStartedAt(LocalDateTime.now());
+            blank.setOcrCompletedAt(null);
 
             ScannedBlank updated = scannedBlankRepository.save(blank);
             return Response.success(scanMapper.toScannedBlankResponse(updated), "OCR job re-queued successfully");
@@ -614,6 +620,8 @@ public class ScanServiceImpl implements ScanService {
             blank.setProcessingStatus(ScannedBlank.ProcessingStatus.PENDING_OCR);
             blank.setProcessingError(null);
             blank.setProcessedAt(null);
+            blank.setOcrStartedAt(null);
+            blank.setOcrCompletedAt(null);
 
             ScannedBlank updated = scannedBlankRepository.save(blank);
             return Response.success(scanMapper.toScannedBlankResponse(updated), "ROI preview refreshed successfully");

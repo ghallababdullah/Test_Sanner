@@ -112,7 +112,9 @@ public class ScanOcrResultListener {
         blank.setProcessedImagePath(storeOcrArtifacts(blank, event.getProcessedImagePath()));
         blank.setProcessingError(null);
         blank.setProcessingStatus(ScannedBlank.ProcessingStatus.OCR_COMPLETED);
-        blank.setProcessedAt(LocalDateTime.now());
+        LocalDateTime completedAt = LocalDateTime.now();
+        blank.setProcessedAt(completedAt);
+        blank.setOcrCompletedAt(completedAt);
 
         if (event.getOverallConfidence() != null) {
             blank.setOverallConfidence(BigDecimal.valueOf(event.getOverallConfidence()));
@@ -137,13 +139,18 @@ public class ScanOcrResultListener {
         blank.setProcessingStatus(ScannedBlank.ProcessingStatus.PROCESSING);
         blank.setProcessingError(null);
         blank.setProcessedImagePath(event.getProcessedImagePath());
+        if (blank.getOcrStartedAt() == null) {
+            blank.setOcrStartedAt(LocalDateTime.now());
+        }
     }
 
     private void applyFailedResult(ScannedBlank blank, OcrResultEvent event) {
         blank.setProcessingStatus(ScannedBlank.ProcessingStatus.OCR_FAILED);
         blank.setProcessingError(event.getProcessingError());
         blank.setProcessedImagePath(storeOcrArtifacts(blank, event.getProcessedImagePath()));
-        blank.setProcessedAt(LocalDateTime.now());
+        LocalDateTime completedAt = LocalDateTime.now();
+        blank.setProcessedAt(completedAt);
+        blank.setOcrCompletedAt(completedAt);
         blank.setOverallConfidence(null);
         blank.setNeedsReview(true);
         blank.setReviewStatus(ScannedBlank.ReviewStatus.PENDING);

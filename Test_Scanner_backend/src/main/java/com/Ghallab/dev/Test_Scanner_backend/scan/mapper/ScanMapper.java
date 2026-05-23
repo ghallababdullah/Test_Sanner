@@ -105,6 +105,9 @@ public class ScanMapper {
             response.setReviewStatus(scannedBlank.getReviewStatus().name());
         }
 
+        response.setOcrStartedAt(scannedBlank.getOcrStartedAt());
+        response.setOcrCompletedAt(scannedBlank.getOcrCompletedAt());
+
         return response;
     }
 

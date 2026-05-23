@@ -115,6 +115,12 @@ public class ScannedBlank extends BaseEntity {
     @Column(name = "processed_at")
     private LocalDateTime processedAt;
 
+    @Column(name = "ocr_started_at")
+    private LocalDateTime ocrStartedAt;
+
+    @Column(name = "ocr_completed_at")
+    private LocalDateTime ocrCompletedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by")
     private User reviewedBy;
