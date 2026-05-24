@@ -209,9 +209,7 @@ public class ScanServiceImpl implements ScanService {
                     .orElseThrow(() -> new NotFoundException("Test not found"));
 
             List<ScannedBlank> blanks = scannedBlankRepository.findByTestId(testId);
-            List<ScannedBlankResponse> responses = blanks.stream()
-                    .map(scanMapper::toScannedBlankResponse)
-                    .collect(Collectors.toList());
+            List<ScannedBlankResponse> responses = toScannedBlankResponsesWithResults(blanks);
 
             return Response.success(responses, "Scanned blanks retrieved successfully");
 
@@ -238,9 +236,7 @@ public class ScanServiceImpl implements ScanService {
                     .orElseThrow(() -> new NotFoundException("Scan session not found"));
 
             List<ScannedBlank> blanks = scannedBlankRepository.findByScanSessionId(sessionId);
-            List<ScannedBlankResponse> responses = blanks.stream()
-                    .map(scanMapper::toScannedBlankResponse)
-                    .collect(Collectors.toList());
+            List<ScannedBlankResponse> responses = toScannedBlankResponsesWithResults(blanks);
 
             return Response.success(responses, "Scanned blanks retrieved successfully");
 
@@ -265,7 +261,7 @@ public class ScanServiceImpl implements ScanService {
             ScannedBlank blank = scannedBlankRepository.findById(blankId)
                     .orElseThrow(() -> new NotFoundException("Scanned blank not found"));
 
-            return Response.success(scanMapper.toScannedBlankResponse(blank), "Scanned blank retrieved successfully");
+            return Response.success(toScannedBlankResponseWithResult(blank, testResultRepository.findByScannedBlankId(blankId).orElse(null)), "Scanned blank retrieved successfully");
 
         } catch (NotFoundException e) {
             log.error("Not found error: {}", e.getMessage());
@@ -733,6 +729,34 @@ public class ScanServiceImpl implements ScanService {
         BigDecimal percentage = testResult.getPercentage();
         String grade = testResult.getGrade();
         return "Score: " + total + "/" + max + " (" + percentage + "%) - Grade: " + grade;
+    }
+
+    private List<ScannedBlankResponse> toScannedBlankResponsesWithResults(List<ScannedBlank> blanks) {
+        if (blanks == null || blanks.isEmpty()) {
+            return List.of();
+        }
+
+        List<UUID> blankIds = blanks.stream().map(ScannedBlank::getId).toList();
+        Map<UUID, TestResult> resultsByBlankId = testResultRepository.findByScannedBlankIdIn(blankIds).stream()
+                .filter(result -> result.getScannedBlank() != null && result.getScannedBlank().getId() != null)
+                .collect(Collectors.toMap(
+                        result -> result.getScannedBlank().getId(),
+                        result -> result,
+                        (left, right) -> left
+                ));
+
+        return blanks.stream()
+                .map(blank -> toScannedBlankResponseWithResult(blank, resultsByBlankId.get(blank.getId())))
+                .collect(Collectors.toList());
+    }
+
+    private ScannedBlankResponse toScannedBlankResponseWithResult(ScannedBlank blank, TestResult testResult) {
+        ScannedBlankResponse response = scanMapper.toScannedBlankResponse(blank);
+        if (testResult != null) {
+            response.setGrade(testResult.getGrade());
+            response.setPercentage(testResult.getPercentage());
+        }
+        return response;
     }
 
     private ScannedBlank createPendingBlank(ScanSession session, Test test, User currentUser, UploadScannedBlankRequest request) throws IOException {

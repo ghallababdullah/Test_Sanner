@@ -43,6 +43,11 @@ public class ScannedBlankResponse {
     // OCR Quality
     private BigDecimal overallConfidence;
 
+    // Scoring summary
+    private String grade;
+
+    private BigDecimal percentage;
+
     private Boolean needsReview;
 
     private String reviewStatus;

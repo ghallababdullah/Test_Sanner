@@ -48,7 +48,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     public TestAnalyticsSummaryResponse getTestSummary(UUID testId, String userEmail) {
         Test test = getOwnedTest(testId, userEmail);
         List<ScannedBlank> blanks = scannedBlankRepository.findByTestId(testId);
-        List<TestResult> results = testResultRepository.findByTestId(testId);
+        List<TestResult> results = testResultRepository.findByScannedBlankTestId(testId);
         List<StudentAnswer> answers = studentAnswerRepository.findByScannedBlankTestId(testId);
         return buildTestSummary(test, blanks, results, answers);
     }
@@ -75,8 +75,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         List<UUID> testIds = tests.stream().map(Test::getId).toList();
         Map<UUID, List<ScannedBlank>> blanksByTest = scannedBlankRepository.findByTestIdIn(testIds).stream()
                 .collect(Collectors.groupingBy(blank -> blank.getTest().getId()));
-        Map<UUID, List<TestResult>> resultsByTest = testResultRepository.findByTestIdIn(testIds).stream()
-                .collect(Collectors.groupingBy(result -> result.getTest().getId()));
+        Map<UUID, List<TestResult>> resultsByTest = testResultRepository.findByScannedBlankTestIdIn(testIds).stream()
+                .collect(Collectors.groupingBy(result -> result.getScannedBlank().getTest().getId()));
         Map<UUID, List<StudentAnswer>> answersByTest = studentAnswerRepository.findByScannedBlankTestIdIn(testIds).stream()
                 .collect(Collectors.groupingBy(answer -> answer.getScannedBlank().getTest().getId()));
 
