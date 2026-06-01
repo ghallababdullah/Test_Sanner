@@ -7,9 +7,17 @@ import type {
   StartScanSessionRequest
 } from "../../shared/types/scan";
 
+function unwrapApiResponse<T>(response: ApiResponse<T>) {
+  if (!response.success) {
+    throw new Error(response.message || "Request failed");
+  }
+
+  return response.data;
+}
+
 export async function startScanSession(payload: StartScanSessionRequest) {
   const { data } = await http.post<ApiResponse<ScanSessionResponse>>("/scan/start-session", payload);
-  return data.data;
+  return unwrapApiResponse(data);
 }
 
 export async function submitScannedBlank(payload: {
@@ -33,7 +41,7 @@ export async function submitScannedBlank(payload: {
     },
     onUploadProgress: payload.onUploadProgress
   });
-  return data.data;
+  return unwrapApiResponse(data);
 }
 
 export async function submitScannedBlankForPreview(payload: {
@@ -57,10 +65,10 @@ export async function submitScannedBlankForPreview(payload: {
     },
     onUploadProgress: payload.onUploadProgress
   });
-  return data.data;
+  return unwrapApiResponse(data);
 }
 
 export async function fetchSessionBlanks(sessionId: string) {
   const { data } = await http.get<ApiResponse<ScannedBlankResponse[]>>(`/scan/session/${sessionId}/blanks`);
-  return data.data;
+  return unwrapApiResponse(data);
 }

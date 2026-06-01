@@ -302,9 +302,10 @@ public class ScanServiceImpl implements ScanService {
             } catch (Exception previewException) {
                 log.error("Failed to generate ROI preview for blank: {}", savedBlank.getId(), previewException);
                 savedBlank.setProcessingStatus(ScannedBlank.ProcessingStatus.OCR_FAILED);
-                savedBlank.setProcessingError("Failed to prepare ROI preview: " + previewException.getMessage());
+                String previewFailureMessage = buildPreviewFailureMessage(previewException);
+                savedBlank.setProcessingError(previewFailureMessage);
                 savedBlank = scannedBlankRepository.save(savedBlank);
-                return Response.error("Blank saved, but ROI preview generation failed", 500);
+                return Response.error(previewFailureMessage, 500);
             }
 
             session.setTotalBlanks(session.getTotalBlanks() + 1);
@@ -626,7 +627,7 @@ public class ScanServiceImpl implements ScanService {
             return Response.error(e.getMessage(), 404);
         } catch (Exception e) {
             log.error("Error refreshing ROI preview for blank: {}", blankId, e);
-            return Response.error("Failed to refresh ROI preview: " + e.getMessage(), 500);
+            return Response.error(buildPreviewFailureMessage(e), 500);
         }
     }
 
@@ -888,6 +889,27 @@ public class ScanServiceImpl implements ScanService {
             return null;
         }
         return value.length() > maxLength ? value.substring(0, maxLength) : value;
+    }
+
+    private String buildPreviewFailureMessage(Exception exception) {
+        String rawMessage = exception != null ? exception.getMessage() : null;
+        String normalized = rawMessage != null ? rawMessage.toLowerCase() : "";
+
+        if (normalized.contains("cannot detect 4 corner markers")) {
+            return "Cannot detect 4 corner markers on the form image";
+        }
+
+        if (normalized.contains("paper boundary")) {
+            return "Cannot find paper boundary on the form image";
+        }
+
+        if (normalized.contains("roi preview")) {
+            return "Failed to prepare ROI preview";
+        }
+
+        return rawMessage != null && !rawMessage.isBlank()
+                ? "Failed to prepare ROI preview: " + rawMessage
+                : "Failed to prepare ROI preview";
     }
 
     @SuppressWarnings("unchecked")

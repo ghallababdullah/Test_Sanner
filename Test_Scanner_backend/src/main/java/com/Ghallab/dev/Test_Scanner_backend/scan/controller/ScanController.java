@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +43,12 @@ public class ScanController {
 
     private final ScanService scanService;
 
+    private <T> ResponseEntity<Response<T>> respond(Response<T> response) {
+        int statusCode = response != null ? response.getStatusCode() : 500;
+        HttpStatus status = HttpStatus.resolve(statusCode);
+        return ResponseEntity.status(status != null ? status : HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
     /**
      * Start a new scanning session
      * POST /api/scan/start-session
@@ -61,7 +68,7 @@ public class ScanController {
             @Valid @RequestBody StartScanSessionRequest request) {
         log.info("Starting scan session for test: {}", request.getTestId());
         Response<ScanSessionResponse> response = scanService.startScanSession(request);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     /**
@@ -90,7 +97,7 @@ public class ScanController {
                 request.getTestId(),
                 image != null ? image.getOriginalFilename() : "<missing>");
         Response<ScannedBlankResponse> response = scanService.submitScannedBlank(request);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     @PostMapping(value = "/submit-blank-preview", consumes = {"multipart/form-data"})
@@ -101,7 +108,7 @@ public class ScanController {
                 request.getTestId(),
                 image != null ? image.getOriginalFilename() : "<missing>");
         Response<ScannedBlankResponse> response = scanService.submitScannedBlankForPreview(request);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     /**
@@ -113,7 +120,7 @@ public class ScanController {
             @PathVariable UUID testId) {
         log.info("Fetching scanned blanks for test: {}", testId);
         Response<List<ScannedBlankResponse>> response = scanService.getScannedBlanksByTest(testId);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     /**
@@ -125,7 +132,7 @@ public class ScanController {
             @PathVariable UUID sessionId) {
         log.info("Fetching scanned blanks for session: {}", sessionId);
         Response<List<ScannedBlankResponse>> response = scanService.getScannedBlanksBySession(sessionId);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     /**
@@ -137,7 +144,7 @@ public class ScanController {
             @PathVariable UUID blankId) {
         log.info("Fetching scanned blank: {}", blankId);
         Response<ScannedBlankResponse> response = scanService.getScannedBlankById(blankId);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     @GetMapping("/blank/{blankId}/asset/{kind}")
@@ -166,7 +173,7 @@ public class ScanController {
             @PathVariable UUID blankId) {
         log.info("Fetching ROI metadata for blank: {}", blankId);
         Response<List<RoiMetaResponse>> response = scanService.getBlankRoiMetadata(blankId);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     @GetMapping("/blank/{blankId}/roi-overrides")
@@ -174,7 +181,7 @@ public class ScanController {
             @PathVariable UUID blankId) {
         log.info("Fetching ROI overrides for blank: {}", blankId);
         Response<Map<String, RoiBoxResponse>> response = scanService.getBlankRoiOverrides(blankId);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     @PutMapping("/blank/{blankId}/roi-overrides")
@@ -186,7 +193,7 @@ public class ScanController {
                 blankId,
                 request != null ? request.getOverrides() : null
         );
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     @DeleteMapping("/blank/{blankId}")
@@ -194,7 +201,7 @@ public class ScanController {
             @PathVariable UUID blankId) {
         log.info("Deleting scanned blank: {}", blankId);
         Response<String> response = scanService.deleteScannedBlank(blankId);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     /**
@@ -206,7 +213,7 @@ public class ScanController {
             @PathVariable UUID blankId) {
         log.info("Fetching scanned blank details: {}", blankId);
         Response<ScannedBlankDetailedResponse> response = scanService.getScannedBlankDetails(blankId);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     /**
@@ -222,7 +229,7 @@ public class ScanController {
             @RequestParam(required = false) String reviewNotes) {
         log.info("Marking scanned blank for review: {}", blankId);
         Response<ScannedBlankResponse> response = scanService.markForReview(blankId, reviewNotes);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     /**
@@ -247,7 +254,7 @@ public class ScanController {
         Object errorCorrections = request != null ? request.get("errorCorrections") : null;
 
         Response<ScannedBlankResponse> response = scanService.applyErrorCorrections(blankId, errorCorrections);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     @PostMapping("/blank/{blankId}/retry-ocr")
@@ -255,7 +262,7 @@ public class ScanController {
             @PathVariable UUID blankId) {
         log.info("Retrying OCR for blank: {}", blankId);
         Response<ScannedBlankResponse> response = scanService.retryOcr(blankId);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 
     @PostMapping("/blank/{blankId}/refresh-preview")
@@ -263,7 +270,7 @@ public class ScanController {
             @PathVariable UUID blankId) {
         log.info("Refreshing ROI preview for blank: {}", blankId);
         Response<ScannedBlankResponse> response = scanService.refreshPreview(blankId);
-        return ResponseEntity.ok(response);
+        return respond(response);
     }
 }
 
