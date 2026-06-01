@@ -10,6 +10,8 @@ declare global {
   }
 }
 
+type YandexMetricaFunction = NonNullable<Window["ym"]>;
+
 function isBrowser() {
   return typeof window !== "undefined" && typeof document !== "undefined";
 }
@@ -20,12 +22,15 @@ export function initYandexMetrica() {
   }
 
   if (!window.ym) {
-    type YandexMetricaFunction = NonNullable<typeof window.ym>;
-    const ym = function(counterId: number, method: string, ...args: unknown[]) {
-      const queue = ym.a ?? [];
+    const ym = ((counterId: number, method: string, ...args: unknown[]) => {
+      const currentYm = window.ym as YandexMetricaFunction | undefined;
+      const queue = currentYm?.a ?? [];
       queue.push([counterId, method, ...args]);
-      ym.a = queue;
-    } as YandexMetricaFunction;
+      if (currentYm) {
+        currentYm.a = queue;
+      }
+    }) as YandexMetricaFunction;
+    ym.a = [];
     ym.l = Date.now();
     window.ym = ym;
   }
