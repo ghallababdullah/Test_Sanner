@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /tests
+Disallow: /analytics
+Disallow: /review
+Disallow: /scan
+Disallow: /profile
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email-result
+
+Sitemap: https://skanproverka.ru:8443/sitemap.xml
