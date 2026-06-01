@@ -20,9 +20,12 @@ export function initYandexMetrica() {
   }
 
   if (!window.ym) {
+    type YandexMetricaFunction = NonNullable<typeof window.ym>;
     const ym = function(counterId: number, method: string, ...args: unknown[]) {
-      (ym.a = ym.a || []).push([counterId, method, ...args]);
-    } as NonNullable<typeof window.ym>;
+      const queue = ym.a ?? [];
+      queue.push([counterId, method, ...args]);
+      ym.a = queue;
+    } as YandexMetricaFunction;
     ym.l = Date.now();
     window.ym = ym;
   }
