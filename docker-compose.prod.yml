@@ -67,7 +67,7 @@ services:
       BACKEND_PUBLIC_BASE_URL: ${BACKEND_PUBLIC_BASE_URL}
       SCAN_STORAGE_ROOT: /app/storage/scans
       PYTHON_OCR_OUTPUT_ROOT: /opt/python_cv_ocr/output
-      PYTHON_CMD: python3
+      PYTHON_CMD: /opt/python-preview-venv/bin/python
       PYTHON_PROJECT_DIR: /opt/python_cv_ocr
       SERVER_PORT: 8080
     volumes:

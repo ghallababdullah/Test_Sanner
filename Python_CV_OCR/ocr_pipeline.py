@@ -175,6 +175,408 @@ def filter_isolated_ink_components(ink_mask):
     return cleaned_mask.astype(bool)
 
 
+def _collect_component_stats(mask_u8: np.ndarray) -> list[dict[str, int | float]]:
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_u8, connectivity=8)
+    components: list[dict[str, int | float]] = []
+    for label in range(1, num_labels):
+        area = int(stats[label, cv2.CC_STAT_AREA])
+        if area <= 0:
+            continue
+        left = int(stats[label, cv2.CC_STAT_LEFT])
+        top = int(stats[label, cv2.CC_STAT_TOP])
+        width = int(stats[label, cv2.CC_STAT_WIDTH])
+        height = int(stats[label, cv2.CC_STAT_HEIGHT])
+        cx, cy = centroids[label]
+        components.append(
+            {
+                "label": label,
+                "left": left,
+                "top": top,
+                "width": width,
+                "height": height,
+                "right": left + width,
+                "bottom": top + height,
+                "area": area,
+                "cx": float(cx),
+                "cy": float(cy),
+            }
+        )
+    return components
+
+
+def _is_identity_text_roi(roi_name: str) -> bool:
+    return roi_name in {"name", "surname"}
+
+
+def _build_strict_image(image: np.ndarray, roi_name: str) -> np.ndarray | None:
+    if image is None or image.size == 0:
+        return None
+
+    ink_mask = image < 245
+    if not ink_mask.any():
+        return None
+
+    mask_u8 = ink_mask.astype("uint8")
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_u8, connectivity=8)
+    components = []
+    for label in range(1, num_labels):
+        area = int(stats[label, cv2.CC_STAT_AREA])
+        if area <= 0:
+            continue
+        left = int(stats[label, cv2.CC_STAT_LEFT])
+        top = int(stats[label, cv2.CC_STAT_TOP])
+        width = int(stats[label, cv2.CC_STAT_WIDTH])
+        height = int(stats[label, cv2.CC_STAT_HEIGHT])
+        cx, cy = centroids[label]
+        components.append(
+            {
+                "label": label,
+                "left": left,
+                "top": top,
+                "width": width,
+                "height": height,
+                "right": left + width,
+                "bottom": top + height,
+                "area": area,
+                "cx": float(cx),
+                "cy": float(cy),
+            }
+        )
+    if not components:
+        return None
+
+    largest_area = max(int(component["area"]) for component in components)
+    min_area = max(10, int(round(largest_area * 0.14)))
+    min_height = 8 if _is_identity_text_roi(roi_name) else 7
+    min_width = 3
+
+    core_components = [
+        component
+        for component in components
+        if int(component["area"]) >= min_area
+        and int(component["height"]) >= min_height
+        and int(component["width"]) >= min_width
+    ]
+    if not core_components:
+        core_components = [
+            component
+            for component in components
+            if int(component["area"]) >= max(6, min_area // 2)
+            and int(component["height"]) >= max(5, min_height - 2)
+        ]
+    if not core_components:
+        core_components = components
+
+    median_cy = float(np.median([component["cy"] for component in core_components]))
+    median_h = float(np.median([component["height"] for component in core_components]))
+    band_pad = max(3, int(round(median_h * 0.55)))
+    band_top = max(0, int(round(median_cy - median_h * 0.5 - band_pad)))
+    band_bottom = min(image.shape[0], int(round(median_cy + median_h * 0.5 + band_pad)))
+
+    line_components = []
+    for component in core_components:
+        top = int(component["top"])
+        bottom = int(component["bottom"])
+        overlap = min(bottom, band_bottom) - max(top, band_top)
+        if overlap > 0:
+            line_components.append(component)
+    if not line_components:
+        line_components = core_components
+
+    primary_left = min(int(component["left"]) for component in line_components)
+    primary_top = min(int(component["top"]) for component in line_components)
+    primary_bottom = max(int(component["bottom"]) for component in line_components)
+
+    sorted_line = sorted(line_components, key=lambda component: int(component["left"]))
+    if len(sorted_line) > 1:
+        line_gaps = [
+            int(sorted_line[idx + 1]["left"]) - int(sorted_line[idx]["right"])
+            for idx in range(len(sorted_line) - 1)
+        ]
+        positive_gaps = [gap for gap in line_gaps if gap > 0]
+        typical_gap = float(np.median(positive_gaps)) if positive_gaps else 0.0
+    else:
+        typical_gap = 0.0
+
+    anchor = sorted_line[-1]
+    strict_right = int(anchor["right"])
+    gap_limit = max(10, int(round(max(typical_gap, 0.0) * 2.2)))
+
+    # Split the detected line into horizontal clusters. When the crop contains
+    # multiple isolated "islands" of ink, keep only the strongest cluster
+    # instead of trying to trim just the far-right tail.
+    clusters: list[list[dict[str, int | float]]] = []
+    current_cluster = [sorted_line[0]]
+    for idx in range(1, len(sorted_line)):
+        gap = int(sorted_line[idx]["left"]) - int(sorted_line[idx - 1]["right"])
+        if gap > gap_limit:
+            clusters.append(current_cluster)
+            current_cluster = [sorted_line[idx]]
+        else:
+            current_cluster.append(sorted_line[idx])
+    clusters.append(current_cluster)
+
+    if len(clusters) > 1:
+        def cluster_score(cluster: list[dict[str, int | float]]) -> float:
+            cluster_left = int(cluster[0]["left"])
+            cluster_right = int(cluster[-1]["right"])
+            cluster_width = max(1, cluster_right - cluster_left)
+            cluster_area = sum(int(component["area"]) for component in cluster)
+            cluster_count = len(cluster)
+            center_bias = max(0.0, 1.0 - (cluster_left / max(1, image.shape[1])) * 0.35)
+            return (
+                cluster_area
+                + cluster_count * max(6.0, largest_area * 0.12)
+                + cluster_width * 0.15
+            ) * center_bias
+
+        best_cluster = max(clusters, key=cluster_score)
+        sorted_line = best_cluster
+        anchor = sorted_line[-1]
+        strict_right = int(best_cluster[-1]["right"])
+
+    # Detect a small isolated right-side cluster of one or several components.
+    # This catches cases where the tail looks symbol-like, but is detached from the main word.
+    if len(sorted_line) >= 3:
+        tail_start = len(sorted_line) - 1
+        while tail_start > 0:
+            current_gap = int(sorted_line[tail_start]["left"]) - int(sorted_line[tail_start - 1]["right"])
+            if current_gap > gap_limit:
+                break
+            tail_start -= 1
+
+        if tail_start > 0:
+            preceding_gap = int(sorted_line[tail_start]["left"]) - int(sorted_line[tail_start - 1]["right"])
+            tail_cluster = sorted_line[tail_start:]
+            main_cluster = sorted_line[:tail_start]
+
+            tail_count = len(tail_cluster)
+            tail_area = sum(int(component["area"]) for component in tail_cluster)
+            main_area = sum(int(component["area"]) for component in main_cluster)
+            tail_left = int(tail_cluster[0]["left"])
+            tail_right = int(tail_cluster[-1]["right"])
+            main_left = int(main_cluster[0]["left"])
+            main_right = int(main_cluster[-1]["right"])
+            tail_width = tail_right - tail_left
+            main_width = max(1, main_right - main_left)
+
+            tail_looks_isolated = (
+                preceding_gap > gap_limit
+                and tail_count <= 3
+                and tail_area <= max(int(round(main_area * 0.28)), int(round(largest_area * 0.60)))
+                and tail_width <= max(18, int(round(main_width * 0.35)))
+            )
+            if tail_looks_isolated:
+                strict_right = int(main_cluster[-1]["right"])
+
+    strict_left = int(sorted_line[0]["left"])
+
+    if len(sorted_line) >= 2:
+        prev_component = sorted_line[-2]
+        tail_gap = int(anchor["left"]) - int(prev_component["right"])
+        tail_looks_suspicious = (
+            tail_gap > gap_limit
+            and int(anchor["area"]) <= max(14, int(round(largest_area * 0.16)))
+            and int(anchor["width"]) <= 6
+        )
+        if tail_looks_suspicious:
+            strict_right = int(prev_component["right"])
+
+    keep_labels = set()
+    near_pad_x = 6 if _is_identity_text_roi(roi_name) else 8
+    near_pad_y = 5 if _is_identity_text_roi(roi_name) else 6
+    for component in components:
+        label = int(component["label"])
+        left = int(component["left"])
+        right = int(component["right"])
+        top = int(component["top"])
+        bottom = int(component["bottom"])
+
+        overlaps_text_band = min(bottom, band_bottom) - max(top, band_top) > 0
+        is_within_strict_left = left >= strict_left - near_pad_x
+        is_within_strict_right = right <= strict_right + near_pad_x
+        is_near_primary = (
+            right >= primary_left - near_pad_x
+            and left <= strict_right + near_pad_x
+            and bottom >= primary_top - near_pad_y
+            and top <= primary_bottom + near_pad_y
+        )
+        if overlaps_text_band and is_within_strict_left and is_within_strict_right and is_near_primary:
+            keep_labels.add(label)
+
+    if not keep_labels:
+        keep_labels = {int(component["label"]) for component in line_components}
+
+    cleaned_mask = np.zeros_like(mask_u8)
+    for label in keep_labels:
+        cleaned_mask[labels == label] = 1
+
+    ys, xs = cleaned_mask.nonzero()
+    if len(xs) == 0 or len(ys) == 0:
+        return None
+
+    min_x, max_x = int(xs.min()), int(xs.max())
+    min_y, max_y = int(ys.min()), int(ys.max())
+    pad_x = 4
+    pad_y = 3
+    left = max(0, min_x - pad_x)
+    right = min(image.shape[1], max_x + pad_x + 1)
+    top = max(0, min_y - pad_y)
+    bottom = min(image.shape[0], max_y + pad_y + 1)
+
+    refined = image[top:bottom, left:right]
+    if refined.size == 0:
+        return None
+    return refined
+
+
+def create_refined_trimmed_crop(source_path: str, target_path: str, roi_name: str) -> bool:
+    image = cv2.imread(source_path, cv2.IMREAD_GRAYSCALE)
+    if image is None:
+        return False
+
+    ink_mask = image < 245
+    if not ink_mask.any():
+        return False
+
+    mask_u8 = ink_mask.astype("uint8")
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_u8, connectivity=8)
+    components = []
+    for label in range(1, num_labels):
+        area = int(stats[label, cv2.CC_STAT_AREA])
+        if area <= 0:
+            continue
+        left = int(stats[label, cv2.CC_STAT_LEFT])
+        top = int(stats[label, cv2.CC_STAT_TOP])
+        width = int(stats[label, cv2.CC_STAT_WIDTH])
+        height = int(stats[label, cv2.CC_STAT_HEIGHT])
+        cx, cy = centroids[label]
+        components.append(
+            {
+                "label": label,
+                "left": left,
+                "top": top,
+                "width": width,
+                "height": height,
+                "right": left + width,
+                "bottom": top + height,
+                "area": area,
+                "cx": float(cx),
+                "cy": float(cy),
+            }
+        )
+    if not components:
+        return False
+
+    largest_area = max(int(component["area"]) for component in components)
+    significant_area = max(8, int(round(largest_area * 0.10)))
+    strong_components = [
+        component
+        for component in components
+        if int(component["area"]) >= significant_area
+        or int(component["width"]) >= 5
+        or int(component["height"]) >= 8
+    ]
+    if not strong_components:
+        strong_components = components
+
+    median_cy = float(np.median([component["cy"] for component in strong_components]))
+    median_h = float(np.median([component["height"] for component in strong_components]))
+    band_pad = max(4, int(round(median_h * 0.75)))
+    band_top = max(0, int(round(median_cy - median_h * 0.5 - band_pad)))
+    band_bottom = min(image.shape[0], int(round(median_cy + median_h * 0.5 + band_pad)))
+
+    line_components = []
+    for component in strong_components:
+        top = int(component["top"])
+        bottom = int(component["bottom"])
+        overlap = min(bottom, band_bottom) - max(top, band_top)
+        if overlap > 0:
+            line_components.append(component)
+    if not line_components:
+        line_components = strong_components
+
+    primary_left = min(int(component["left"]) for component in line_components)
+    primary_right = max(int(component["right"]) for component in line_components)
+    primary_top = min(int(component["top"]) for component in line_components)
+    primary_bottom = max(int(component["bottom"]) for component in line_components)
+
+    keep_labels = {int(component["label"]) for component in line_components}
+    near_pad_x = 8 if _is_identity_text_roi(roi_name) else 12
+    near_pad_y = 6 if _is_identity_text_roi(roi_name) else 8
+    max_tail_area = max(12, int(round(largest_area * 0.08)))
+    max_tail_width = 4 if _is_identity_text_roi(roi_name) else 5
+    max_tail_height = 7 if _is_identity_text_roi(roi_name) else 8
+
+    for component in components:
+        label = int(component["label"])
+        if label in keep_labels:
+            continue
+
+        left = int(component["left"])
+        right = int(component["right"])
+        top = int(component["top"])
+        bottom = int(component["bottom"])
+        area = int(component["area"])
+        width = int(component["width"])
+        height = int(component["height"])
+
+        overlaps_text_band = min(bottom, band_bottom) - max(top, band_top) > 0
+        is_near_primary = (
+            right >= primary_left - near_pad_x
+            and left <= primary_right + near_pad_x
+            and bottom >= primary_top - near_pad_y
+            and top <= primary_bottom + near_pad_y
+        )
+        looks_like_tiny_tail = (
+            left > primary_right
+            and area <= max_tail_area
+            and width <= max_tail_width
+            and height <= max_tail_height
+        )
+
+        if looks_like_tiny_tail:
+            continue
+        if overlaps_text_band and is_near_primary:
+            keep_labels.add(label)
+
+    cleaned_mask = np.zeros_like(mask_u8)
+    for label in keep_labels:
+        cleaned_mask[labels == label] = 1
+
+    ys, xs = cleaned_mask.nonzero()
+    if len(xs) == 0 or len(ys) == 0:
+        return False
+
+    min_x, max_x = int(xs.min()), int(xs.max())
+    min_y, max_y = int(ys.min()), int(ys.max())
+    pad_x = 5
+    pad_y = 4
+    left = max(0, min_x - pad_x)
+    right = min(image.shape[1], max_x + pad_x + 1)
+    top = max(0, min_y - pad_y)
+    bottom = min(image.shape[0], max_y + pad_y + 1)
+
+    refined = image[top:bottom, left:right]
+    if refined.size == 0:
+        return False
+
+    cv2.imwrite(target_path, refined)
+    return True
+
+
+def create_refined_trimmed_crop_strict(source_path: str, target_path: str, roi_name: str) -> bool:
+    image = cv2.imread(source_path, cv2.IMREAD_GRAYSCALE)
+    if image is None:
+        return False
+
+    strict_image = _build_strict_image(image, roi_name)
+    if strict_image is None:
+        return False
+    cv2.imwrite(target_path, strict_image)
+    return True
+
+
 def create_simple_clean_crop(source_path: str, target_path: str) -> bool:
     image = cv2.imread(source_path)
     if image is None:
@@ -215,10 +617,30 @@ def attach_trimmed_variants(output_dir: str, clean_crops: dict[str, list[str]]) 
         for source_path in paths:
             if not os.path.exists(source_path):
                 continue
-            variants.append(source_path)
-            trimmed_path = os.path.join(output_dir, f"{roi_name}_trimmed.png")
-            if create_trimmed_crop(source_path, trimmed_path):
-                variants.append(trimmed_path)
+
+            trimmed_work_path = os.path.join(output_dir, f"{roi_name}_trimmed_work.png")
+            if create_trimmed_crop(source_path, trimmed_work_path):
+                # Historical path:
+                # trimmed_path = os.path.join(output_dir, f"{roi_name}_trimmed.png")
+                # variants.append(trimmed_path)
+                # refined_trimmed_path = os.path.join(output_dir, f"{roi_name}_trimmed_refined.png")
+                # create_refined_trimmed_crop(trimmed_path, refined_trimmed_path, roi_name)
+                # variants.append(refined_trimmed_path)
+                #
+                # Active path:
+                # use the strict refined crop as the main OCR/app artifact.
+                refined_trimmed_strict_path = os.path.join(output_dir, f"{roi_name}_trimmed_refined_strict.png")
+                if create_refined_trimmed_crop_strict(trimmed_work_path, refined_trimmed_strict_path, roi_name):
+                    variants.append(refined_trimmed_strict_path)
+                else:
+                    variants.append(source_path)
+
+                try:
+                    os.remove(trimmed_work_path)
+                except OSError:
+                    pass
+            else:
+                variants.append(source_path)
         if variants:
             enriched[roi_name] = variants
     return enriched

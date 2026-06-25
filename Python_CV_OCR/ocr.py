@@ -365,8 +365,17 @@ def is_correction_answer_field(roi_name: str) -> bool:
 def prioritize_image_paths(roi_name: str, image_paths: list[str]) -> list[str]:
     if not image_paths:
         return image_paths
+    def priority(path: str) -> int:
+        if path.endswith("_trimmed_refined_strict.png"):
+            return 0
+        if path.endswith("_trimmed.png"):
+            return 1
+        return 2
+
     if roi_name.startswith("corr"):
-        return sorted(image_paths, key=lambda path: 0 if path.endswith("_trimmed.png") else 1)
+        return sorted(image_paths, key=priority)
+    if any(path.endswith("_trimmed_refined_strict.png") for path in image_paths):
+        return sorted(image_paths, key=priority)
     return image_paths
 
 

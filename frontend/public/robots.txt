@@ -5,7 +5,6 @@ Disallow: /analytics
 Disallow: /review
 Disallow: /scan
 Disallow: /profile
-Disallow: /login
 Disallow: /register
 Disallow: /forgot-password
 Disallow: /reset-password

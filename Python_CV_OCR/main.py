@@ -49,6 +49,85 @@ def normalize_roi_gray(roi):
     return clahe.apply(normalized)
 
 
+def build_q4_stage_dump(source_roi, detect_roi, output_dir):
+    """
+    Save intermediate preprocessing stages for a single presentation-friendly ROI example.
+    This is intentionally limited to q4 so the normal pipeline output stays compact.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    source_bgr = cv2.cvtColor(source_roi, cv2.COLOR_RGB2BGR)
+    detect_bgr = cv2.cvtColor(detect_roi, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(os.path.join(output_dir, "00_source_roi.png"), source_bgr)
+    cv2.imwrite(os.path.join(output_dir, "01_detect_roi.png"), detect_bgr)
+
+    gray = cv2.cvtColor(source_roi, cv2.COLOR_RGB2GRAY)
+    cv2.imwrite(os.path.join(output_dir, "02_gray.png"), gray)
+
+    h, w = gray.shape[:2]
+    bg_size = _odd(max(21, min(h, w) // 2))
+    background = cv2.GaussianBlur(gray, (bg_size, bg_size), 0)
+    cv2.imwrite(os.path.join(output_dir, "03_background_blur.png"), background)
+
+    normalized = cv2.divide(gray, background, scale=255)
+    cv2.imwrite(os.path.join(output_dir, "04_background_normalized.png"), normalized)
+
+    clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+    clahe_gray = clahe.apply(normalized)
+    cv2.imwrite(os.path.join(output_dir, "05_clahe.png"), clahe_gray)
+
+    blur = cv2.GaussianBlur(clahe_gray, (3, 3), 0)
+    cv2.imwrite(os.path.join(output_dir, "06_otsu_blur.png"), blur)
+
+    _, binary_inv = cv2.threshold(
+        blur,
+        0,
+        255,
+        cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU,
+    )
+    cv2.imwrite(os.path.join(output_dir, "07_otsu_binary_inv.png"), binary_inv)
+
+    binary_white = cv2.bitwise_not(binary_inv)
+    cv2.imwrite(os.path.join(output_dir, "08_otsu_binary_white.png"), binary_white)
+
+    no_grid = remove_dotted_grid_from_binary(binary_white)
+    cv2.imwrite(os.path.join(output_dir, "09_grid_removed.png"), no_grid)
+
+    ink = cv2.bitwise_not(no_grid)
+    cv2.imwrite(os.path.join(output_dir, "10_prepare_ink_before_close.png"), ink)
+
+    ink_closed = cv2.morphologyEx(
+        ink,
+        cv2.MORPH_CLOSE,
+        cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2)),
+    )
+    cv2.imwrite(os.path.join(output_dir, "11_prepare_ink_after_close.png"), ink_closed)
+
+    final_binary = cv2.bitwise_not(ink_closed)
+    cv2.imwrite(os.path.join(output_dir, "12_final_norm_otsu.png"), final_binary)
+
+    summary = {
+        "roi_name": "q4",
+        "saved_stages": [
+            "00_source_roi.png",
+            "01_detect_roi.png",
+            "02_gray.png",
+            "03_background_blur.png",
+            "04_background_normalized.png",
+            "05_clahe.png",
+            "06_otsu_blur.png",
+            "07_otsu_binary_inv.png",
+            "08_otsu_binary_white.png",
+            "09_grid_removed.png",
+            "10_prepare_ink_before_close.png",
+            "11_prepare_ink_after_close.png",
+            "12_final_norm_otsu.png",
+        ],
+    }
+    with open(os.path.join(output_dir, "q4_pipeline_stages.json"), "w", encoding="utf-8") as meta_file:
+        json.dump(summary, meta_file, ensure_ascii=False, indent=2)
+
+
 def threshold_to_binary(gray, method="otsu"):
     """
     Return a black-on-white binary image.
@@ -304,7 +383,7 @@ def analyze_binary_content(bin_img, roi_name=""):
     }
 
 
-def build_adaptive_roi_variants(roi_name, source_roi, detect_roi):
+def build_adaptive_roi_variants(roi_name, source_roi, detect_roi, out_dir=None):
     """
     Build the OCR image variants for this ROI.
     We currently keep only the best-performing `norm_otsu` output.
@@ -312,7 +391,13 @@ def build_adaptive_roi_variants(roi_name, source_roi, detect_roi):
     gray = normalize_roi_gray(source_roi)
     norm_otsu = threshold_to_binary(gray, method="otsu")
     norm_otsu = remove_dotted_grid_from_binary(norm_otsu)
-    return {"norm_otsu": prepare_binary_for_ocr(norm_otsu)}
+    final_norm_otsu = prepare_binary_for_ocr(norm_otsu)
+
+    if roi_name == "q4" and out_dir is not None:
+        q4_debug_dir = os.path.join(out_dir, "q4_pipeline_stages")
+        build_q4_stage_dump(source_roi, detect_roi, q4_debug_dir)
+
+    return {"norm_otsu": final_norm_otsu}
 
 def rebuild_text_line(chars, spacing=10, pad=5):
     """
@@ -439,7 +524,7 @@ def process_one(image_path: str, definitions: dict) -> dict | None:
             counts_by_roi[name] = len(boxes)
 
             source_roi = output_crops.get(name, roi)
-            variants = build_adaptive_roi_variants(name, source_roi, roi)
+            variants = build_adaptive_roi_variants(name, source_roi, roi, out_dir=out_dir)
             if not variants:
                 continue
 
