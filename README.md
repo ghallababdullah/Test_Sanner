@@ -54,8 +54,7 @@ React/TS  ──HTTPS──►  Spring Boot  ──AMQP──►  Python Worker
 
 ## Demo
 
-🌐 **Live:** [link to your deployed app]
-🎬 **Video:** [link to your demo video]
+🌐 **Live:** [https://skanproverka.ru:8443/]
 
 ## About
 
